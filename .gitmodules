@@ -1,0 +1,7 @@
+[submodule "thirdparty/vendor/asio"]
+	path = thirdparty/vendor/asio
+	url = https://github.com/chriskohlhoff/asio.git
+[submodule "thirdparty/vendor/thirdparty/vendor/oboe"]
+	path = thirdparty/vendor/oboe
+	url = https://github.com/google/oboe
+	branch = 1.4-stable
