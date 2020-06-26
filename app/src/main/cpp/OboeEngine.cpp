@@ -25,16 +25,21 @@ const std::vector<int16_t> *PacketBuffer::RefNextHeadForRead() {
     return &pkts_[head];
 }
 
-std::vector<int16_t> *PacketBuffer::RefNextTailForWrite() {
+std::vector<int16_t> *PacketBuffer::RefTailForWrite() {
+    auto tail = tail_.load();
+    return &pkts_[tail];
+}
+
+bool PacketBuffer::NextTail() {
     auto head = head_.load(), tail = tail_.load();
     if (tail + 1 == head || (!head && tail == kPacketBufferSize - 1)) {
-        return nullptr;
+        return false;
     }
     if (++tail >= kPacketBufferSize) {
         tail = 0;
     }
     tail_.store(tail);
-    return &pkts_[tail];
+    return true;
 }
 
 RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer)
@@ -89,21 +94,19 @@ void RtpReceiveThread::StartReceive() {
 }
 
 void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
-    std::vector<int16_t> *buffer = nullptr;
     if (bytes_recvd <= kRtpHeader) {
         __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Packet Too Small");
-        goto start_recv;
+        StartReceive();
+        return;
     } else if (bytes_recvd != kRtpPacketSize) {
         __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Strange packet %zu", bytes_recvd);
     }
-    buffer = pkt_buffer_.RefNextTailForWrite();
-    if (!buffer) {
+    auto buffer = pkt_buffer_.RefTailForWrite()->data();
+    std::memcpy(buffer, data_ + kRtpHeader, bytes_recvd - kRtpHeader);
+    if (!pkt_buffer_.NextTail()) {
         __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Packet Buffer Full");
-        goto start_recv;
     }
-    std::memcpy(buffer->data(), data_ + kRtpHeader, bytes_recvd - kRtpHeader);
 
-    start_recv:
     StartReceive();
 }
 

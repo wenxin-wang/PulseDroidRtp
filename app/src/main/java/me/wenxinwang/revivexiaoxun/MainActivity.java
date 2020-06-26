@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
             String sampleRateStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
             String framesPerBurstStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
             final String infoMsg =
-                "Default sampleRate:" + sampleRateStr + ", framesPerBurst:" + framesPerBurstStr + framesPerBurstStr;
+                "Default sampleRate:" + sampleRateStr + ", framesPerBurst:" + framesPerBurstStr;
             setInfoMsg(infoMsg);
         } else {
             setInfoMsg("Older version start");

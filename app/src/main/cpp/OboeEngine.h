@@ -32,7 +32,8 @@ class PacketBuffer {
 public:
     PacketBuffer();
     const std::vector<int16_t>* RefNextHeadForRead();
-    std::vector<int16_t>* RefNextTailForWrite();
+    std::vector<int16_t>* RefTailForWrite();
+    bool NextTail();
 private:
     std::vector<std::vector<int16_t>> pkts_;
     std::atomic<unsigned> head_;
