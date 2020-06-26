@@ -20,7 +20,7 @@
 // RTP payload: 1280 + 12 = 1292
 
 const unsigned kRtpHeader = 12;
-const unsigned kRtpMtu = 1280;
+const unsigned kRtpMtu = 320;
 const unsigned kRtpPacketSize = kRtpHeader + kRtpMtu;
 const unsigned kNumChannel = 2;
 const unsigned kSampleSize = 2;
