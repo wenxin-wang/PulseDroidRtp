@@ -2,7 +2,7 @@
 // Created by wenxin on 20-6-14.
 //
 
-#include "OboeEngine.h"
+#include "PulseRtpOboeEngine.h"
 #include <android/log.h>
 #include <logging_macros.h>
 #include <trace.h>
@@ -116,17 +116,17 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     StartReceive();
 }
 
-OboeEngine::OboeEngine()
+PulseRtpOboeEngine::PulseRtpOboeEngine()
         : receive_thread_(pkt_buffer_) {
     // Trace::initialize();
     Start();
 }
 
-OboeEngine::~OboeEngine() {
+PulseRtpOboeEngine::~PulseRtpOboeEngine() {
     Stop();
 }
 
-void OboeEngine::Start() {
+void PulseRtpOboeEngine::Start() {
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output);
     builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
@@ -147,12 +147,12 @@ void OboeEngine::Start() {
     managedStream_->requestStart();
 }
 
-void OboeEngine::Stop() {
+void PulseRtpOboeEngine::Stop() {
     managedStream_->stop(); // timeout for 2s
     latencyTuner_.reset();
 }
 
-bool OboeEngine::EnsureBuffer() {
+bool PulseRtpOboeEngine::EnsureBuffer() {
     while (!buffer_ || offset_ >= buffer_->size()) {
         offset_ = 0;
         buffer_ = pkt_buffer_.RefNextHeadForRead();
@@ -164,7 +164,7 @@ bool OboeEngine::EnsureBuffer() {
 }
 
 oboe::DataCallbackResult
-OboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
+PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
     auto *outputData = static_cast<int16_t *>(audioData);
     if (!latencyTuner_) {
         latencyTuner_ = std::make_unique<oboe::LatencyTuner>(*audioStream);

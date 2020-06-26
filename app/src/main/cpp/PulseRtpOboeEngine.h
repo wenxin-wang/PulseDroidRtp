@@ -63,11 +63,11 @@ private:
     std::thread thread_;
 };
 
-class OboeEngine
+class PulseRtpOboeEngine
 : public oboe::AudioStreamCallback {
 public:
-    OboeEngine();
-    ~OboeEngine();
+    PulseRtpOboeEngine();
+    ~PulseRtpOboeEngine();
 
     int32_t getBufferCapacityInFrames() const {
         return managedStream_->getBufferSizeInFrames();

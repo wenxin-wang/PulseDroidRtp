@@ -4,7 +4,7 @@ import android.content.Context;
 import android.media.AudioManager;
 import android.os.Build;
 
-public class AudioEngine {
+public class PulseRtpAudioEngine {
     static long mEngineHandle = 0;
 
     // Load native library

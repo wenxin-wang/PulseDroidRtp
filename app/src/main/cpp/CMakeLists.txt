@@ -28,7 +28,7 @@ include_directories(${DEBUG_UTILS_PATH})
 # App specific sources
 set (APP_SOURCES
     jni_bridge.cpp
-        OboeEngine.cpp
+        PulseRtpOboeEngine.cpp
     )
 
 # Build the librevive-xiaoxun library
