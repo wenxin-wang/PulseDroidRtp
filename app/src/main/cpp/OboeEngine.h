@@ -25,7 +25,7 @@ const unsigned kRtpPacketSize = kRtpHeader + kRtpMtu;
 const unsigned kNumChannel = 2;
 const unsigned kSampleSize = 2;
 const unsigned kSampleRate = 48000;
-const unsigned kMaxLatency = 500;
+const unsigned kMaxLatency = 1000;
 const unsigned kPacketBufferSize = (1 + kSampleRate * kMaxLatency / 1000 / (kRtpMtu / kNumChannel / kSampleSize));
 
 class PacketBuffer {
@@ -34,6 +34,12 @@ public:
     const std::vector<int16_t>* RefNextHeadForRead();
     std::vector<int16_t>* RefTailForWrite();
     bool NextTail();
+
+    std::atomic<unsigned> head_move_req_;
+    std::atomic<unsigned> head_move_;
+    std::atomic<unsigned> tail_move_req_;
+    std::atomic<unsigned> tail_move_;
+
 private:
     std::vector<std::vector<int16_t>> pkts_;
     std::atomic<unsigned> head_;
@@ -88,8 +94,11 @@ private:
     PacketBuffer pkt_buffer_;
     RtpReceiveThread receive_thread_;
     oboe::ManagedStream managedStream_;
+    std::unique_ptr<oboe::LatencyTuner> latencyTuner_;
     const std::vector<int16_t>* buffer_ = nullptr;
     unsigned offset_ = 0;
+
+    unsigned count_ = 0;
 };
 
 #endif //REVIVEXIAOXUN_OBOEENGINE_H

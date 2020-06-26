@@ -4,9 +4,11 @@
 
 #include "OboeEngine.h"
 #include <android/log.h>
+#include <logging_macros.h>
+#include <trace.h>
 
 PacketBuffer::PacketBuffer()
-        : head_(0), tail_(0) {
+        : head_move_req_(0), head_move_(0), tail_move_req_(0), tail_move_(0), head_(0), tail_(0) {
     pkts_.reserve(kPacketBufferSize);
     for (unsigned i = 0; i < kPacketBufferSize; ++i) {
         pkts_.emplace_back(kRtpMtu / kSampleSize, 0);
@@ -14,6 +16,7 @@ PacketBuffer::PacketBuffer()
 }
 
 const std::vector<int16_t> *PacketBuffer::RefNextHeadForRead() {
+    ++head_move_req_;
     auto head = head_.load(), tail = tail_.load();
     if (head == tail) {
         return nullptr;
@@ -22,6 +25,7 @@ const std::vector<int16_t> *PacketBuffer::RefNextHeadForRead() {
         head = 0;
     }
     head_.store(head);
+    ++head_move_;
     return &pkts_[head];
 }
 
@@ -31,6 +35,7 @@ std::vector<int16_t> *PacketBuffer::RefTailForWrite() {
 }
 
 bool PacketBuffer::NextTail() {
+    ++tail_move_req_;
     auto head = head_.load(), tail = tail_.load();
     if (tail + 1 == head || (!head && tail == kPacketBufferSize - 1)) {
         return false;
@@ -39,6 +44,7 @@ bool PacketBuffer::NextTail() {
         tail = 0;
     }
     tail_.store(tail);
+    ++tail_move_;
     return true;
 }
 
@@ -66,9 +72,9 @@ void RtpReceiveThread::Start() {
                         asio::ip::address::from_string("224.0.0.56")));
 
         StartReceive();
-        __android_log_print(ANDROID_LOG_INFO, MODULE_NAME, "Start Receiving");
+        LOGI("Start Receiving");
         io_.run();
-        __android_log_print(ANDROID_LOG_INFO, MODULE_NAME, "Stop Receiving");
+        LOGI("Stop Receiving");
     });
 }
 
@@ -87,7 +93,7 @@ void RtpReceiveThread::StartReceive() {
                     return;
                 }
                 if (error == asio::error::message_size) {
-                    __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Long packet");
+                    LOGE("Long packet");
                 }
                 HandleReceive(bytes_recvd);
             });
@@ -95,16 +101,16 @@ void RtpReceiveThread::StartReceive() {
 
 void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     if (bytes_recvd <= kRtpHeader) {
-        __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Packet Too Small");
+        LOGE("Packet Too Small");
         StartReceive();
         return;
     } else if (bytes_recvd != kRtpPacketSize) {
-        __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Strange packet %zu", bytes_recvd);
+        LOGE("Strange packet %zu", bytes_recvd);
     }
     auto buffer = pkt_buffer_.RefTailForWrite()->data();
     std::memcpy(buffer, data_ + kRtpHeader, bytes_recvd - kRtpHeader);
     if (!pkt_buffer_.NextTail()) {
-        __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Packet Buffer Full");
+        LOGE("Packet Buffer Full");
     }
 
     StartReceive();
@@ -112,6 +118,7 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
 
 OboeEngine::OboeEngine()
         : receive_thread_(pkt_buffer_) {
+    // Trace::initialize();
     Start();
 }
 
@@ -130,18 +137,19 @@ void OboeEngine::Start() {
     builder.setCallback(this);
     oboe::Result result = builder.openManagedStream(managedStream_);
     if (result != oboe::Result::OK) {
-        __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME, "Failed to create stream. Error: %s",
-                            oboe::convertToText(result));
+        LOGE("Failed to create stream. Error: %s",
+             oboe::convertToText(result));
     }
-    __android_log_print(ANDROID_LOG_INFO, MODULE_NAME, "Open stream, c:%d s:%d p:%d b:%d",
-                        getBufferCapacityInFrames(), getSharingMode(),
-                        getPerformanceMode(), getFramesPerBurst());
+    LOGI("Open stream, c:%d s:%d p:%d b:%d",
+         getBufferCapacityInFrames(), getSharingMode(),
+         getPerformanceMode(), getFramesPerBurst());
 
     managedStream_->requestStart();
 }
 
 void OboeEngine::Stop() {
     managedStream_->stop(); // timeout for 2s
+    latencyTuner_.reset();
 }
 
 bool OboeEngine::EnsureBuffer() {
@@ -158,13 +166,24 @@ bool OboeEngine::EnsureBuffer() {
 oboe::DataCallbackResult
 OboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
     auto *outputData = static_cast<int16_t *>(audioData);
+    if (!latencyTuner_) {
+        latencyTuner_ = std::make_unique<oboe::LatencyTuner>(*audioStream);
+    }
+    if (audioStream->getAudioApi() == oboe::AudioApi::AAudio) {
+        latencyTuner_->tune();
+    }
+    auto underrunCountResult = audioStream->getXRunCount();
+    int bufferSize = audioStream->getBufferSizeInFrames();
+    // if (Trace::isEnabled())
+    //     Trace::beginSection(
+    //             "numFrames %d, Underruns %d, buffer size %d",
+    //             numFrames, underrunCountResult.value(), bufferSize);
 
     size_t num_sample = 0;
     for (int i = 0; i < numFrames; ++i) {
         for (int j = 0; j < kNumChannel; ++j) {
             if (!EnsureBuffer()) {
-                __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME,
-                                    "No more data: %zu/%d", num_sample, numFrames);
+                // LOGE("No more data: %zu/%d", num_sample, numFrames);
                 goto no_more_data;
             }
             outputData[i * kNumChannel + j] = ntohs((*buffer_)[offset_]);
@@ -177,11 +196,21 @@ OboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_
     if (num_sample < unsigned(numFrames) * kNumChannel) {
         memset((char *) audioData + sizeof(int16_t) * num_sample, 0,
                sizeof(int16_t) * (unsigned(numFrames) * kNumChannel - num_sample));
-        std::string logstr =
-                "Fill with empty: " + std::to_string(num_sample) + "/" + std::to_string(numFrames);
-        __android_log_print(ANDROID_LOG_ERROR, MODULE_NAME,
-                            "Fill with empty: %zu/%d", num_sample, numFrames);
+        // std::string logstr =
+        //         "Fill with empty: " + std::to_string(num_sample) + "/" + std::to_string(numFrames);
+        // LOGE("Fill with empty: %zu/%d", num_sample, numFrames);
     }
 
+    // if (Trace::isEnabled()) Trace::endSection();
+    if (!count_) {
+        LOGI("numFrames %d, Underruns %d, buffer size %d q:%u/%u %u/%u",
+             numFrames, underrunCountResult.value(), bufferSize,
+             pkt_buffer_.head_move_req_.load(), pkt_buffer_.head_move_.load(),
+             pkt_buffer_.tail_move_req_.load(), pkt_buffer_.tail_move_.load());
+    }
+    ++count_;
+    if (count_ >= 500) {
+        count_ = 0;
+    }
     return oboe::DataCallbackResult::Continue;
 }
