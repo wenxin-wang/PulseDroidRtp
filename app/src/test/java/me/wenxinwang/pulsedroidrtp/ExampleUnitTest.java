@@ -1,4 +1,4 @@
-package me.wenxinwang.revivexiaoxun;
+package me.wenxinwang.pulsedroidrtp;
 
 import org.junit.Test;
 

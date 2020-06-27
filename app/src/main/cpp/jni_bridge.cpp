@@ -8,7 +8,7 @@
 
 extern "C" {
 JNIEXPORT jlong JNICALL
-Java_me_wenxinwang_revivexiaoxun_PulseRtpAudioEngine_native_1createEngine(
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
         JNIEnv *env,
         jclass /*unused*/) {
     // We use std::nothrow so `new` returns a nullptr if the engine creation fails
@@ -17,7 +17,7 @@ Java_me_wenxinwang_revivexiaoxun_PulseRtpAudioEngine_native_1createEngine(
 }
 
 JNIEXPORT void JNICALL
-Java_me_wenxinwang_revivexiaoxun_PulseRtpAudioEngine_native_1deleteEngine(
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1deleteEngine(
         JNIEnv *env,
         jclass,
         jlong engineHandle) {
@@ -26,7 +26,7 @@ Java_me_wenxinwang_revivexiaoxun_PulseRtpAudioEngine_native_1deleteEngine(
 }
 
 JNIEXPORT void JNICALL
-Java_me_wenxinwang_revivexiaoxun_PulseRtpAudioEngine_native_1setDefaultStreamValues(
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamValues(
         JNIEnv *env,
         jclass type,
         jint sampleRate,

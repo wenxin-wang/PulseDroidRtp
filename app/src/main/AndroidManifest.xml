@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="me.wenxinwang.revivexiaoxun">
+    package="me.wenxinwang.pulsedroidrtp">
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -12,7 +12,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity" android:keepScreenOn="true">
+        <activity android:name="me.wenxinwang.pulsedroidrtp.MainActivity" android:keepScreenOn="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

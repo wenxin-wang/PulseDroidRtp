@@ -31,15 +31,15 @@ set (APP_SOURCES
         PulseRtpOboeEngine.cpp
     )
 
-# Build the librevive-xiaoxun library
-add_library(revive-xiaoxun SHARED
+# Build the libpulsedroid-rtp library
+add_library(pulsedroid-rtp SHARED
     ${DEBUG_UTILS_SOURCES}
     ${APP_SOURCES}
     )
 
 # Specify the libraries needed for hello-oboe
-target_link_libraries(revive-xiaoxun android log oboe)
+target_link_libraries(pulsedroid-rtp android log oboe)
 
 # Enable optimization flags: if having problems with source level debugging,
 # disable -Ofast ( and debug ), re-enable after done debugging.
-target_compile_options(revive-xiaoxun PRIVATE -Wall -Werror "$<$<CONFIG:RELEASE>:-Ofast>")
+target_compile_options(pulsedroid-rtp PRIVATE -Wall -Werror "$<$<CONFIG:RELEASE>:-Ofast>")

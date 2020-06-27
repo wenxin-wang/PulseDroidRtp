@@ -1,4 +1,4 @@
-package me.wenxinwang.revivexiaoxun;
+package me.wenxinwang.pulsedroidrtp;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -20,6 +20,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("me.wenxinwang.revivexiaoxun", appContext.getPackageName());
+        assertEquals("me.wenxinwang.pulsedroidrtp", appContext.getPackageName());
     }
 }

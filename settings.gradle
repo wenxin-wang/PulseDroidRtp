@@ -1,2 +1,2 @@
 include ':app'
-rootProject.name = "Revive Xiaoxun"
+rootProject.name = "PulseAudio Rtp Receiver"

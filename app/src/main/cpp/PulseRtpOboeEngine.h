@@ -2,8 +2,8 @@
 // Created by wenxin on 20-6-14.
 //
 
-#ifndef REVIVEXIAOXUN_OBOEENGINE_H
-#define REVIVEXIAOXUN_OBOEENGINE_H
+#ifndef PULSERTP_OBOEENGINE_H
+#define PULSERTP_OBOEENGINE_H
 
 #include <cstdint>
 #include <vector>
@@ -12,7 +12,7 @@
 #include <asio.hpp>
 #include <oboe/Oboe.h>
 
-#define MODULE_NAME "REVIVE_XIAOXUN"
+#define MODULE_NAME "PULSE_RTP_OBOE_ENGINE"
 
 // MTU: 1280, channel 2, sample se16e -> 320 sample per pkt
 // 48k sample per s -> 150 pkt/s
@@ -101,4 +101,4 @@ private:
     unsigned count_ = 0;
 };
 
-#endif //REVIVEXIAOXUN_OBOEENGINE_H
+#endif //PULSERTP_OBOEENGINE_H

@@ -1,4 +1,4 @@
-package me.wenxinwang.revivexiaoxun;
+package me.wenxinwang.pulsedroidrtp;
 
 import android.content.Context;
 import android.media.AudioManager;
@@ -9,7 +9,7 @@ public class PulseRtpAudioEngine {
 
     // Load native library
     static {
-        System.loadLibrary("revive-xiaoxun");
+        System.loadLibrary("pulsedroid-rtp");
     }
 
     static boolean create(Context context){
