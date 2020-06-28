@@ -92,6 +92,7 @@ private:
     std::unique_ptr<oboe::LatencyTuner> latencyTuner_;
     const std::vector<int16_t>* buffer_ = nullptr;
     unsigned offset_ = 0;
+    bool is_thread_affinity_set_ = false;
 
     unsigned count_ = 0;
 };

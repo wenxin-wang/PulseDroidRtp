@@ -64,12 +64,32 @@ RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer,
     Start(ip, port, mtu);
 }
 
+// borrowed from oboe samples
+static void setThreadAffinity() {
+    pid_t current_thread_id = gettid();
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
+
+    // If the callback cpu ids aren't specified then bind to the current cpu
+    int current_cpu_id = sched_getcpu();
+    LOGI("Binding to current CPU ID %d", current_cpu_id);
+    CPU_SET(current_cpu_id, &cpu_set);
+    // nproc = sysconf(_SC_NPROCESSORS_ONLN);
+    int result = sched_setaffinity(current_thread_id, sizeof(cpu_set_t), &cpu_set);
+    if (result == 0) {
+        LOGV("Thread affinity set");
+    } else {
+        LOGW("Error setting thread affinity. Error no: %d", result);
+    }
+}
+
 RtpReceiveThread::~RtpReceiveThread() {
     Stop();
 }
 
 void RtpReceiveThread::Start(const std::string& ip, uint16_t port, int mtu) {
     thread_ = std::thread([&]() {
+        setThreadAffinity();
         auto local_address = asio::ip::address::from_string(ip);
         bool is_mcast = local_address.is_multicast();
         auto listen_address = local_address;
@@ -158,18 +178,14 @@ PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t po
     switch (latency_option) {
         case 0:
             performanceMode = oboe::PerformanceMode::LowLatency;
-            LOGE("FRE %d", latency_option);
             break;
         case 1:
             performanceMode = oboe::PerformanceMode::None;
-            LOGE("FRE %d", latency_option);
             break;
         case 2:
             performanceMode = oboe::PerformanceMode::PowerSaving;
-            LOGE("FRE %d", latency_option);
             break;
         default:
-            LOGE("FRRE %d", latency_option);
             break;
     }
 
@@ -214,6 +230,11 @@ oboe::DataCallbackResult
 PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData,
                                  int32_t numFrames) {
     auto *outputData = static_cast<int16_t *>(audioData);
+
+    if (!is_thread_affinity_set_) {
+        setThreadAffinity();
+        is_thread_affinity_set_ = true;
+    }
     if (!latencyTuner_) {
         latencyTuner_ = std::make_unique<oboe::LatencyTuner>(*audioStream);
     }
