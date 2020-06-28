@@ -66,7 +66,7 @@ private:
 class PulseRtpOboeEngine
 : public oboe::AudioStreamCallback {
 public:
-    PulseRtpOboeEngine();
+    PulseRtpOboeEngine(int latency_option);
     ~PulseRtpOboeEngine();
 
     int32_t getBufferCapacityInFrames() const {
@@ -88,7 +88,7 @@ public:
     oboe::DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
 private:
-    void Start();
+    void Start(int latency_option);
     void Stop();
     bool EnsureBuffer();
     PacketBuffer pkt_buffer_;

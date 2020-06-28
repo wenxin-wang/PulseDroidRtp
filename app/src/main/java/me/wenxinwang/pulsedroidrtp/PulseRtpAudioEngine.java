@@ -40,8 +40,13 @@ public class PulseRtpAudioEngine {
         mEngineHandle = 0;
     }
 
+    static void setLatencyOption(int i) {
+        native_setLatencyOption(i);
+    }
+
     // Native methods
     private static native long native_createEngine();
     private static native void native_deleteEngine(long engineHandle);
     private static native void native_setDefaultStreamValues(int sampleRate, int framesPerBurst);
+    private static native void native_setLatencyOption(int latencyOption);
 }

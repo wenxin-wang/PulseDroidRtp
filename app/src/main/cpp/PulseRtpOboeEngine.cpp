@@ -116,24 +116,44 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     StartReceive();
 }
 
-PulseRtpOboeEngine::PulseRtpOboeEngine()
+PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option)
         : receive_thread_(pkt_buffer_) {
     // Trace::initialize();
-    Start();
+    Start(latency_option);
 }
 
 PulseRtpOboeEngine::~PulseRtpOboeEngine() {
     Stop();
 }
 
-void PulseRtpOboeEngine::Start() {
+void PulseRtpOboeEngine::Start(int latency_option) {
+    oboe::PerformanceMode performanceMode = oboe::PerformanceMode::None;
+    switch (latency_option) {
+        case 0:
+            performanceMode = oboe::PerformanceMode::LowLatency;
+            LOGE("FRE %d", latency_option);
+            break;
+        case 1:
+            performanceMode = oboe::PerformanceMode::None;
+            LOGE("FRE %d", latency_option);
+            break;
+        case 2:
+            performanceMode = oboe::PerformanceMode::PowerSaving;
+            LOGE("FRE %d", latency_option);
+            break;
+        default:
+            LOGE("FRRE %d", latency_option);
+            break;
+    }
+
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output);
-    builder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+    builder.setPerformanceMode(performanceMode);
     builder.setSharingMode(oboe::SharingMode::Exclusive);
     builder.setFormat(oboe::AudioFormat::I16);
     builder.setChannelCount(oboe::ChannelCount::Stereo);
-    builder.setSampleRate(48000);
+    // Always use default sample rate
+    // builder.setSampleRate(48000);
     builder.setCallback(this);
     oboe::Result result = builder.openManagedStream(managedStream_);
     if (result != oboe::Result::OK) {

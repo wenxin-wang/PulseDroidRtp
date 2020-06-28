@@ -25,10 +25,8 @@ Here's something that still confuses me:
 
 TODO:
 
-- [ ] use `MusicService` for playing in background state
 - add UI for
- - [ ] Start/Stop
+ - [x] Start/Stop
  - [ ] MTU
  - [ ] IP/Port
- - [ ] Sample Rate
 - [ ] support unicast
