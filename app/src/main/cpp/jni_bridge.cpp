@@ -6,15 +6,21 @@
 #include <oboe/Oboe.h>
 #include "PulseRtpOboeEngine.h"
 
-int g_latency_option = 0;
-
 extern "C" {
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
         JNIEnv *env,
-        jclass /*unused*/) {
+        jclass /*unused*/,
+        jint latency_option,
+        jstring jip,
+        jint port,
+        jint mtu) {
     // We use std::nothrow so `new` returns a nullptr if the engine creation fails
-    PulseRtpOboeEngine *engine = new(std::nothrow) PulseRtpOboeEngine(g_latency_option);
+    const char* ip_c = env->GetStringUTFChars(jip, 0);
+    std::string ip(ip_c);
+    env->ReleaseStringUTFChars(jip, ip_c);
+    PulseRtpOboeEngine *engine = new(std::nothrow) PulseRtpOboeEngine(
+            latency_option, ip, (uint16_t)port, mtu);
     return reinterpret_cast<jlong>(engine);
 }
 
@@ -35,14 +41,6 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamVal
         jint framesPerBurst) {
     oboe::DefaultStreamValues::SampleRate = (int32_t) sampleRate;
     oboe::DefaultStreamValues::FramesPerBurst = (int32_t) framesPerBurst;
-}
-
-JNIEXPORT void JNICALL
-Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setLatencyOption(
-        JNIEnv *env,
-        jclass type,
-        jint latency_option) {
-    g_latency_option = latency_option;
 }
 
 } // extern "C"

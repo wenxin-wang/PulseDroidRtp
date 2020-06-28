@@ -19,39 +19,34 @@
 // 100ms buffer: 15pkt
 // RTP payload: 1280 + 12 = 1292
 
-const unsigned kRtpHeader = 12;
-const unsigned kRtpMtu = 320;
-const unsigned kRtpPacketSize = kRtpHeader + kRtpMtu;
-const unsigned kNumChannel = 2;
-const unsigned kSampleSize = 2;
-const unsigned kSampleRate = 48000;
-const unsigned kMaxLatency = 1000;
-const unsigned kPacketBufferSize = (1 + kSampleRate * kMaxLatency / 1000 / (kRtpMtu / kNumChannel / kSampleSize));
-
 class PacketBuffer {
 public:
-    PacketBuffer();
+    PacketBuffer(unsigned mtu);
     const std::vector<int16_t>* RefNextHeadForRead();
     std::vector<int16_t>* RefTailForWrite();
     bool NextTail();
+
+    unsigned head_move_req() const { return head_move_req_; }
+    unsigned head_move() const { return head_move_; }
+    unsigned tail_move_req() const { return tail_move_req_; }
+    unsigned tail_move() const { return tail_move_; }
+private:
+    std::vector<std::vector<int16_t>> pkts_;
+    std::atomic<unsigned> head_;
+    std::atomic<unsigned> tail_;
 
     std::atomic<unsigned> head_move_req_;
     std::atomic<unsigned> head_move_;
     std::atomic<unsigned> tail_move_req_;
     std::atomic<unsigned> tail_move_;
-
-private:
-    std::vector<std::vector<int16_t>> pkts_;
-    std::atomic<unsigned> head_;
-    std::atomic<unsigned> tail_;
 };
 
 class RtpReceiveThread {
 public:
-    RtpReceiveThread(PacketBuffer& pkt_buffer);
+    RtpReceiveThread(PacketBuffer& pkt_buffer, const std::string& ip, uint16_t port, int mtu);
     ~RtpReceiveThread();
 private:
-    void Start();
+    void Start(const std::string& ip, uint16_t port, int mtu);
     void Stop();
     void StartReceive();
     void HandleReceive(size_t bytes_recvd);
@@ -59,14 +54,14 @@ private:
     asio::io_context io_;
     asio::ip::udp::socket socket_;
     asio::ip::udp::endpoint sender_endpoint_;
-    char data_[kRtpPacketSize];
+    std::vector<char> data_;
     std::thread thread_;
 };
 
 class PulseRtpOboeEngine
 : public oboe::AudioStreamCallback {
 public:
-    PulseRtpOboeEngine(int latency_option);
+    PulseRtpOboeEngine(int latency_option, const std::string& ip, uint16_t port, unsigned mtu);
     ~PulseRtpOboeEngine();
 
     int32_t getBufferCapacityInFrames() const {
@@ -88,7 +83,7 @@ public:
     oboe::DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
 private:
-    void Start(int latency_option);
+    void Start(int latency_option, const std::string& ip, uint16_t port, unsigned mtu);
     void Stop();
     bool EnsureBuffer();
     PacketBuffer pkt_buffer_;

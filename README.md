@@ -27,6 +27,6 @@ TODO:
 
 - add UI for
  - [x] Start/Stop
- - [ ] MTU
- - [ ] IP/Port
-- [ ] support unicast
+ - [x] MTU
+ - [x] IP/Port
+- [x] support unicast

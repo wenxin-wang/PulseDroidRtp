@@ -1,6 +1,11 @@
 <resources>
     <string name="app_name">PulseAudio Rtp Receiver</string>
+
     <string name="latency_options">Latency Options</string>
+    <string name="ip">IP</string>
+    <string name="port">Port</string>
+    <string name="mtu">MTU</string>
+
     <string name="play">Play</string>
     <string name="stop">Stop</string>
     <string name="description_key">description</string>

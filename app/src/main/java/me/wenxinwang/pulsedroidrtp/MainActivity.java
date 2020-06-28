@@ -1,6 +1,7 @@
 package me.wenxinwang.pulsedroidrtp;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -20,11 +22,24 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String[] LATENCY_OPTIONS = {"Low Latency", "None", "Power Saving"};
+    private static final String SHARRED_PREF_NAME = "PulseDroidRtp";
+    private static final String SHARED_PREF_LATENCY = "latency";
+    private static final String SHARED_PREF_IP = "ip";
+    private static final String SHARED_PREF_PORT = "port";
+    private static final String SHARED_PREF_MTU = "mtu";
 
-    private Spinner mLatencySpinner;
+
+    private Spinner mLatencySpinner = null;
+    private EditText mIpEdit = null;
+    private EditText mPortEdit = null;
+    private EditText mMtuEdit = null;
     private TextView mInfo = null;
     private Button mButton = null;
 
+    private int mLatencyOption = 0;
+    private String mIp = "224.0.0.56";
+    private int mPort = 4010;
+    private int mMtu = 320;
     private Boolean mPlaying = false;
 
     @Override
@@ -44,7 +59,23 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mIpEdit = (EditText)findViewById(R.id.ipEdit);
+        mPortEdit = (EditText)findViewById(R.id.portEdit);
+        mMtuEdit = (EditText)findViewById(R.id.mtuEdit);
+
         setupLatencySpinner();
+
+        SharedPreferences sharedPref = getSharedPreferences(
+            SHARRED_PREF_NAME, Context.MODE_PRIVATE);
+        mLatencyOption = sharedPref.getInt(SHARED_PREF_LATENCY, 0);
+        mIp = sharedPref.getString(SHARED_PREF_IP, mIp);
+        mPort = sharedPref.getInt(SHARED_PREF_PORT, mPort);
+        mMtu = sharedPref.getInt(SHARED_PREF_MTU, mMtu);
+
+        mLatencySpinner.setSelection(mLatencyOption);
+        mIpEdit.setText(mIp);
+        mPortEdit.setText(String.valueOf(mPort));
+        mMtuEdit.setText(String.valueOf(mMtu));
     }
 
     /*
@@ -89,13 +120,42 @@ public class MainActivity extends AppCompatActivity {
             String sampleRateStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
             String framesPerBurstStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
             final String infoMsg =
-                "Default sampleRate:" + sampleRateStr + ", framesPerBurst:" + framesPerBurstStr;
+                "Default sampleRate: " + sampleRateStr + ", framesPerBurst: " + framesPerBurstStr;
             setInfoMsg(infoMsg);
         } else {
             setInfoMsg("Older version start");
         }
 
-        PulseRtpAudioEngine.create(this);
+        String ip = mIpEdit.getText().toString();
+        if (!ip.isEmpty()) {
+            mIp = ip;
+        }
+        try {
+            int port = Integer.parseInt(mPortEdit.getText().toString());
+            if (port > 0 && port <= 65535) {
+                mPort = port;
+            }
+        } catch(NumberFormatException nfe) {
+            System.out.println("Could not parse port " + nfe);
+        }
+        try {
+            int mtu = Integer.parseInt(mMtuEdit.getText().toString());
+            if (mtu > 0) {
+                mMtu = mtu;
+            }
+        } catch(NumberFormatException nfe) {
+            System.out.println("Could not parse port " + nfe);
+        }
+        SharedPreferences sharedPref = getSharedPreferences(
+            SHARRED_PREF_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putInt(SHARED_PREF_LATENCY, mLatencyOption);
+        editor.putString(SHARED_PREF_IP, mIp);
+        editor.putInt(SHARED_PREF_PORT, mPort);
+        editor.putInt(SHARED_PREF_MTU, mMtu);
+        editor.commit();
+
+        PulseRtpAudioEngine.create(this, mLatencyOption, mIp, mPort, mMtu);
     }
 
     private void StopPlaying() {
@@ -125,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
         mLatencySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                PulseRtpAudioEngine.setLatencyOption(i);
+                mLatencyOption = i;
             }
 
             @Override

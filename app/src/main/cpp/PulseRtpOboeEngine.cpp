@@ -7,11 +7,21 @@
 #include <logging_macros.h>
 #include <trace.h>
 
-PacketBuffer::PacketBuffer()
-        : head_move_req_(0), head_move_(0), tail_move_req_(0), tail_move_(0), head_(0), tail_(0) {
-    pkts_.reserve(kPacketBufferSize);
-    for (unsigned i = 0; i < kPacketBufferSize; ++i) {
-        pkts_.emplace_back(kRtpMtu / kSampleSize, 0);
+namespace {
+    static const unsigned kRtpHeader = 12;
+    static const unsigned kNumChannel = 2;
+    static const unsigned kSampleSize = 2;
+    static const unsigned kSampleRate = 48000;
+    static const unsigned kMaxLatency = 1000;
+}
+
+PacketBuffer::PacketBuffer(unsigned mtu)
+        : head_(0), tail_(0), head_move_req_(0), head_move_(0), tail_move_req_(0), tail_move_(0) {
+    const unsigned num_buffer = (1 + kSampleRate * kMaxLatency / 1000 /
+                                     (mtu / kNumChannel / kSampleSize));
+    pkts_.reserve(num_buffer);
+    for (unsigned i = 0; i < num_buffer; ++i) {
+        pkts_.emplace_back(mtu / kSampleSize, 0);
     }
 }
 
@@ -21,7 +31,7 @@ const std::vector<int16_t> *PacketBuffer::RefNextHeadForRead() {
     if (head == tail) {
         return nullptr;
     }
-    if (++head >= kPacketBufferSize) {
+    if (++head >= pkts_.size()) {
         head = 0;
     }
     head_.store(head);
@@ -37,10 +47,10 @@ std::vector<int16_t> *PacketBuffer::RefTailForWrite() {
 bool PacketBuffer::NextTail() {
     ++tail_move_req_;
     auto head = head_.load(), tail = tail_.load();
-    if (tail + 1 == head || (!head && tail == kPacketBufferSize - 1)) {
+    if (tail + 1 == head || (!head && tail == pkts_.size() - 1)) {
         return false;
     }
-    if (++tail >= kPacketBufferSize) {
+    if (++tail >= pkts_.size()) {
         tail = 0;
     }
     tail_.store(tail);
@@ -48,28 +58,40 @@ bool PacketBuffer::NextTail() {
     return true;
 }
 
-RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer)
-        : pkt_buffer_(pkt_buffer), socket_(io_) {
-    Start();
+RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer,
+                                   const std::string &ip, uint16_t port, int mtu)
+        : pkt_buffer_(pkt_buffer), socket_(io_), data_(kRtpHeader + mtu) {
+    Start(ip, port, mtu);
 }
 
 RtpReceiveThread::~RtpReceiveThread() {
     Stop();
 }
 
-void RtpReceiveThread::Start() {
+void RtpReceiveThread::Start(const std::string& ip, uint16_t port, int mtu) {
     thread_ = std::thread([&]() {
+        auto local_address = asio::ip::address::from_string(ip);
+        bool is_mcast = local_address.is_multicast();
+        auto listen_address = local_address;
+        if (is_mcast) {
+            if (local_address.is_v4()) {
+                listen_address = asio::ip::address::from_string("0.0.0.0");
+            } else if (local_address.is_v6()) {
+                listen_address = asio::ip::address::from_string("::");
+            }
+        }
         // Create the socket so that multiple may be bound to the same address.
-        asio::ip::udp::endpoint listen_endpoint(
-                asio::ip::address::from_string("0.0.0.0"), 4010);
+        asio::ip::udp::endpoint listen_endpoint(listen_address, port);
         socket_.open(listen_endpoint.protocol());
-        socket_.set_option(asio::ip::udp::socket::reuse_address(true));
+        if (is_mcast) {
+            socket_.set_option(asio::ip::udp::socket::reuse_address(true));
+        }
         socket_.bind(listen_endpoint);
 
         // Join the multicast group.
-        socket_.set_option(
-                asio::ip::multicast::join_group(
-                        asio::ip::address::from_string("224.0.0.56")));
+        if (is_mcast) {
+            socket_.set_option(asio::ip::multicast::join_group(local_address));
+        }
 
         StartReceive();
         LOGI("Start Receiving");
@@ -87,7 +109,7 @@ void RtpReceiveThread::Stop() {
 
 void RtpReceiveThread::StartReceive() {
     socket_.async_receive_from(
-            asio::buffer(data_, kRtpPacketSize), sender_endpoint_,
+            asio::buffer(data_), sender_endpoint_,
             [&](const asio::error_code &error, size_t bytes_recvd) {
                 if (error && error != asio::error::message_size) {
                     return;
@@ -104,11 +126,11 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
         LOGE("Packet Too Small");
         StartReceive();
         return;
-    } else if (bytes_recvd != kRtpPacketSize) {
+    } else if (bytes_recvd != data_.size()) {
         LOGE("Strange packet %zu", bytes_recvd);
     }
     auto buffer = pkt_buffer_.RefTailForWrite()->data();
-    std::memcpy(buffer, data_ + kRtpHeader, bytes_recvd - kRtpHeader);
+    std::memcpy(buffer, data_.data() + kRtpHeader, bytes_recvd - kRtpHeader);
     if (!pkt_buffer_.NextTail()) {
         LOGE("Packet Buffer Full");
     }
@@ -116,17 +138,22 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     StartReceive();
 }
 
-PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option)
-        : receive_thread_(pkt_buffer_) {
+PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
+                                       const std::string &ip,
+                                       uint16_t port,
+                                       unsigned mtu)
+        : pkt_buffer_(mtu)
+        , receive_thread_(pkt_buffer_, ip, port, mtu) {
     // Trace::initialize();
-    Start(latency_option);
+    Start(latency_option, ip, port, mtu);
 }
 
 PulseRtpOboeEngine::~PulseRtpOboeEngine() {
     Stop();
 }
 
-void PulseRtpOboeEngine::Start(int latency_option) {
+void
+PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t port, unsigned mtu) {
     oboe::PerformanceMode performanceMode = oboe::PerformanceMode::None;
     switch (latency_option) {
         case 0:
@@ -184,7 +211,8 @@ bool PulseRtpOboeEngine::EnsureBuffer() {
 }
 
 oboe::DataCallbackResult
-PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
+PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData,
+                                 int32_t numFrames) {
     auto *outputData = static_cast<int16_t *>(audioData);
     if (!latencyTuner_) {
         latencyTuner_ = std::make_unique<oboe::LatencyTuner>(*audioStream);
@@ -225,8 +253,8 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
     if (!count_) {
         LOGI("numFrames %d, Underruns %d, buffer size %d q:%u/%u %u/%u",
              numFrames, underrunCountResult.value(), bufferSize,
-             pkt_buffer_.head_move_req_.load(), pkt_buffer_.head_move_.load(),
-             pkt_buffer_.tail_move_req_.load(), pkt_buffer_.tail_move_.load());
+             pkt_buffer_.head_move_req(), pkt_buffer_.head_move(),
+             pkt_buffer_.tail_move_req(), pkt_buffer_.tail_move());
     }
     ++count_;
     if (count_ >= 500) {
