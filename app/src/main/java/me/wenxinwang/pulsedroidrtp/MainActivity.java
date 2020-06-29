@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String SHARED_PREF_PORT = "port";
     private static final String SHARED_PREF_MTU = "mtu";
 
+    private static final String STATE_PLAYING = "playing";
 
     private Spinner mLatencySpinner = null;
     private EditText mIpEdit = null;
@@ -40,14 +41,21 @@ public class MainActivity extends AppCompatActivity {
     private String mIp = "224.0.0.56";
     private int mPort = 4010;
     private int mMtu = 320;
+
     private Boolean mPlaying = false;
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        // Make sure to call the super method so that the states of our views are saved
+        super.onSaveInstanceState(outState);
+        // Save our own state now
+        outState.putSerializable(STATE_PLAYING, mPlaying);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mInfo = findViewById(R.id.info);
         // StartPlaying();
@@ -55,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         mButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                togglePlay(view);
+                togglePlay();
             }
         });
 
@@ -76,6 +84,14 @@ public class MainActivity extends AppCompatActivity {
         mIpEdit.setText(mIp);
         mPortEdit.setText(String.valueOf(mPort));
         mMtuEdit.setText(String.valueOf(mMtu));
+
+        mPlaying = false;
+        if (savedInstanceState != null) {
+            boolean wasPlaying = savedInstanceState.getBoolean(STATE_PLAYING, false);
+            if (wasPlaying) {
+                togglePlay();
+            }
+        }
     }
 
     /*
@@ -101,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /** Called when the user touches the button */
-    public void togglePlay(View view) {
+    public void togglePlay() {
         // Do something in response to button click
         if (mPlaying) {
             mPlaying = false;

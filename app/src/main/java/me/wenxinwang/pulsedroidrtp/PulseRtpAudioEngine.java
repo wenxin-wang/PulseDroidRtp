@@ -3,6 +3,7 @@ package me.wenxinwang.pulsedroidrtp;
 import android.content.Context;
 import android.media.AudioManager;
 import android.os.Build;
+import android.util.Log;
 
 public class PulseRtpAudioEngine {
     static long mEngineHandle = 0;
@@ -17,6 +18,8 @@ public class PulseRtpAudioEngine {
         if (mEngineHandle == 0){
             setDefaultStreamValues(context);
             mEngineHandle = native_createEngine(latencyOption, ip, port, mtu);
+        } else {
+            Log.e("pulsedroid-rtp", "Engine handle already created");
         }
         return (mEngineHandle != 0);
     }
