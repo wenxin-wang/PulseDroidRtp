@@ -49,4 +49,100 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamVal
     oboe::DefaultStreamValues::FramesPerBurst = (int32_t) framesPerBurst;
 }
 
+JNIEXPORT jint JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getNumUnderrun(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jint(engine->num_underrun());
+}
+
+JNIEXPORT jint JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getAudioBufferSize(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jint(engine->audio_buffer_size());
+}
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferSize(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_buffer_size());
+}
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferCapacity(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_buffer_capacity());
+}
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMoveReq(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_buffer_head_move_req());
+}
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMove(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_buffer_head_move());
+}
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMoveReq(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_buffer_tail_move_req());
+}
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMove(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_buffer_tail_move());
+}
+
 } // extern "C"

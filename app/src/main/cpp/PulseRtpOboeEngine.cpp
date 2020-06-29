@@ -16,7 +16,13 @@ namespace {
 }
 
 PacketBuffer::PacketBuffer(unsigned mtu)
-        : head_(0), tail_(0), head_move_req_(0), head_move_(0), tail_move_req_(0), tail_move_(0) {
+        : head_(0)
+        , tail_(0)
+        , size_(0)
+        , head_move_req_(0)
+        , head_move_(0)
+        , tail_move_req_(0)
+        , tail_move_(0) {
     const unsigned num_buffer = (1 + kSampleRate * kMaxLatency / 1000 /
                                      (mtu / kNumChannel / kSampleSize));
     pkts_.reserve(num_buffer);
@@ -36,6 +42,7 @@ const std::vector<int16_t> *PacketBuffer::RefNextHeadForRead() {
     }
     head_.store(head);
     ++head_move_;
+    --size_;
     return &pkts_[head];
 }
 
@@ -55,6 +62,7 @@ bool PacketBuffer::NextTail() {
     }
     tail_.store(tail);
     ++tail_move_;
+    ++size_;
     return true;
 }
 
@@ -153,7 +161,7 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     auto buffer = pkt_buffer_.RefTailForWrite()->data();
     std::memcpy(buffer, data_.data() + kRtpHeader, bytes_recvd - kRtpHeader);
     if (!pkt_buffer_.NextTail()) {
-        LOGE("Packet Buffer Full");
+        // LOGE("Packet Buffer Full");
     }
 
     StartReceive();
@@ -164,7 +172,9 @@ PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
                                        uint16_t port,
                                        unsigned mtu)
         : pkt_buffer_(mtu)
-        , receive_thread_(pkt_buffer_, ip, port, mtu) {
+        , receive_thread_(pkt_buffer_, ip, port, mtu)
+        , num_underrun_(0)
+        , audio_buffer_size_(0) {
     // Trace::initialize();
     Start(latency_option, ip, port, mtu);
 }
@@ -244,6 +254,8 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
     }
     auto underrunCountResult = audioStream->getXRunCount();
     int bufferSize = audioStream->getBufferSizeInFrames();
+    num_underrun_.store(underrunCountResult.value());
+    audio_buffer_size_.store(bufferSize);
     // if (Trace::isEnabled())
     //     Trace::beginSection(
     //             "numFrames %d, Underruns %d, buffer size %d",
@@ -272,15 +284,5 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
     }
 
     // if (Trace::isEnabled()) Trace::endSection();
-    if (!count_) {
-        LOGI("numFrames %d, Underruns %d, buffer size %d q:%u/%u %u/%u",
-             numFrames, underrunCountResult.value(), bufferSize,
-             pkt_buffer_.head_move_req(), pkt_buffer_.head_move(),
-             pkt_buffer_.tail_move_req(), pkt_buffer_.tail_move());
-    }
-    ++count_;
-    if (count_ >= 500) {
-        count_ = 0;
-    }
     return oboe::DataCallbackResult::Continue;
 }

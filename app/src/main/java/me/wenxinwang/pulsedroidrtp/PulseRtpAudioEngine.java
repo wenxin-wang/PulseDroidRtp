@@ -43,8 +43,48 @@ public class PulseRtpAudioEngine {
         mEngineHandle = 0;
     }
 
+    static int getNumUnderrun(){
+        return native_getNumUnderrun(mEngineHandle);
+    }
+
+    static int getAudioBufferSize(){
+        return native_getAudioBufferSize(mEngineHandle);
+    }
+
+    static long getPktBufferSize(){
+        return native_getPktBufferSize(mEngineHandle);
+    }
+
+    static long getPktBufferCapacity(){
+        return native_getPktBufferCapacity(mEngineHandle);
+    }
+
+    static long getPktBufferHeadMoveReq(){
+        return native_getPktBufferHeadMoveReq(mEngineHandle);
+    }
+
+    static long getPktBufferHeadMove(){
+        return native_getPktBufferHeadMove(mEngineHandle);
+    }
+
+    static long getPktBufferTailMoveReq(){
+        return native_getPktBufferTailMoveReq(mEngineHandle);
+    }
+
+    static long getPktBufferTailMove(){
+        return native_getPktBufferTailMove(mEngineHandle);
+    }
+
     // Native methods
     private static native long native_createEngine(int latencyOption, String ip, int port, int mtu);
     private static native void native_deleteEngine(long engineHandle);
     private static native void native_setDefaultStreamValues(int sampleRate, int framesPerBurst);
+    private static native int native_getNumUnderrun(long engineHandle);
+    private static native int native_getAudioBufferSize(long engineHandle);
+    private static native long native_getPktBufferCapacity(long engineHandle);
+    private static native long native_getPktBufferSize(long engineHandle);
+    private static native long native_getPktBufferHeadMoveReq(long engineHandle);
+    private static native long native_getPktBufferHeadMove(long engineHandle);
+    private static native long native_getPktBufferTailMoveReq(long engineHandle);
+    private static native long native_getPktBufferTailMove(long engineHandle);
 }

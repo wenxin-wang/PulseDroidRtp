@@ -4,11 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Build;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -30,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String STATE_PLAYING = "playing";
 
+    private static final int STATUS_CHECK_INTERVAL = 1000;
+
     private Spinner mLatencySpinner = null;
     private EditText mIpEdit = null;
     private EditText mPortEdit = null;
@@ -43,6 +44,10 @@ public class MainActivity extends AppCompatActivity {
     private int mMtu = 320;
 
     private Boolean mPlaying = false;
+    private Handler mHandler = null;
+    private Runnable mStatusChecker = null;
+    private String mSampleRateStr = "";
+    private String mFramesPerBurstStr = "";
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -59,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
 
         mInfo = findViewById(R.id.info);
         // StartPlaying();
-        mButton = (Button)findViewById(R.id.play);
+        mButton = (Button) findViewById(R.id.play);
         mButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -67,9 +72,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mIpEdit = (EditText)findViewById(R.id.ipEdit);
-        mPortEdit = (EditText)findViewById(R.id.portEdit);
-        mMtuEdit = (EditText)findViewById(R.id.mtuEdit);
+        mIpEdit = (EditText) findViewById(R.id.ipEdit);
+        mPortEdit = (EditText) findViewById(R.id.portEdit);
+        mMtuEdit = (EditText) findViewById(R.id.mtuEdit);
 
         setupLatencySpinner();
 
@@ -112,36 +117,33 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        StopPlaying();
+        stopPlaying();
         super.onDestroy();
     }
 
-    /** Called when the user touches the button */
+    /**
+     * Called when the user touches the button
+     */
     public void togglePlay() {
         // Do something in response to button click
         if (mPlaying) {
             mPlaying = false;
-            StopPlaying();
+            stopPlaying();
             mButton.setText(R.string.play);
             return;
         }
-        boolean success = StartPlaying();
+        boolean success = startPlaying();
         if (success) {
             mPlaying = true;
             mButton.setText(R.string.stop);
         }
     }
 
-    private boolean StartPlaying() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1){
+    private boolean startPlaying() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             AudioManager myAudioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            String sampleRateStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
-            String framesPerBurstStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
-            final String infoMsg =
-                "Default sampleRate: " + sampleRateStr + ", framesPerBurst: " + framesPerBurstStr;
-            setInfoMsg(infoMsg);
-        } else {
-            setInfoMsg("Older version start");
+            mSampleRateStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+            mFramesPerBurstStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
         }
 
         String ip = mIpEdit.getText().toString();
@@ -153,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
             if (port > 0 && port <= 65535) {
                 mPort = port;
             }
-        } catch(NumberFormatException nfe) {
+        } catch (NumberFormatException nfe) {
             setInfoMsg("Could not parse port " + nfe);
             return false;
         }
@@ -162,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
             if (mtu > 0) {
                 mMtu = mtu;
             }
-        } catch(NumberFormatException nfe) {
+        } catch (NumberFormatException nfe) {
             setInfoMsg("Could not parse port " + nfe);
             return false;
         }
@@ -172,6 +174,8 @@ public class MainActivity extends AppCompatActivity {
             setInfoMsg("Could not create PulseRtpAudioEngine");
             return false;
         }
+
+        startUpdateStatusTimer();
 
         SharedPreferences sharedPref = getSharedPreferences(
             SHARRED_PREF_NAME, Context.MODE_PRIVATE);
@@ -184,9 +188,48 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void StopPlaying() {
+    private void stopPlaying() {
+        stopUpdateStatusTimer();
         setInfoMsg("");
         PulseRtpAudioEngine.delete();
+    }
+
+    private void startUpdateStatusTimer() {
+        if (mHandler != null) {
+            return;
+        }
+        if (mStatusChecker == null) {
+            mStatusChecker = new Runnable() {
+                @Override
+                public void run() {
+                    updateStatus();
+                    mHandler.postDelayed(mStatusChecker, STATUS_CHECK_INTERVAL);
+                }
+            };
+        }
+        mHandler = new Handler();
+        mStatusChecker.run();
+    }
+
+    private void stopUpdateStatusTimer() {
+        if (mHandler == null) {
+            return;
+        }
+        mHandler.removeCallbacks(mStatusChecker);
+    }
+
+    private void updateStatus() {
+        final String infoMsg =
+            "sampleRate: " + mSampleRateStr + ", framesPerBurst: " + mFramesPerBurstStr +
+                "\naudioBuffer: " + PulseRtpAudioEngine.getAudioBufferSize() +
+                ", underRun: " + PulseRtpAudioEngine.getNumUnderrun() +
+                "\npktBuffer: " + PulseRtpAudioEngine.getPktBufferSize() +
+                "/" + PulseRtpAudioEngine.getPktBufferCapacity() +
+                "\nr: " + PulseRtpAudioEngine.getPktBufferHeadMoveReq() +
+                "/" + PulseRtpAudioEngine.getPktBufferHeadMove() +
+                "\nw: " + PulseRtpAudioEngine.getPktBufferTailMoveReq() +
+                "/" + PulseRtpAudioEngine.getPktBufferTailMove();
+        setInfoMsg(infoMsg);
     }
 
     private void setInfoMsg(final String infoMsg) {

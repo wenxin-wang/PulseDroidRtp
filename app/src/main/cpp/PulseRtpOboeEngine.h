@@ -26,6 +26,8 @@ public:
     std::vector<int16_t>* RefTailForWrite();
     bool NextTail();
 
+    unsigned capacity() const { return pkts_.size(); }
+    unsigned size() const { return size_; }
     unsigned head_move_req() const { return head_move_req_; }
     unsigned head_move() const { return head_move_; }
     unsigned tail_move_req() const { return tail_move_req_; }
@@ -34,6 +36,7 @@ private:
     std::vector<std::vector<int16_t>> pkts_;
     std::atomic<unsigned> head_;
     std::atomic<unsigned> tail_;
+    std::atomic<unsigned> size_;
 
     std::atomic<unsigned> head_move_req_;
     std::atomic<unsigned> head_move_;
@@ -63,6 +66,15 @@ class PulseRtpOboeEngine
 public:
     PulseRtpOboeEngine(int latency_option, const std::string& ip, uint16_t port, unsigned mtu);
     ~PulseRtpOboeEngine();
+
+    int num_underrun() const { return num_underrun_; }
+    int audio_buffer_size() const { return audio_buffer_size_; }
+    unsigned pkt_buffer_capacity() const { return pkt_buffer_.capacity(); }
+    unsigned pkt_buffer_size() const { return pkt_buffer_.size(); }
+    unsigned pkt_buffer_head_move_req() const { return pkt_buffer_.head_move_req(); }
+    unsigned pkt_buffer_head_move() const { return pkt_buffer_.head_move(); }
+    unsigned pkt_buffer_tail_move_req() const { return pkt_buffer_.tail_move_req(); }
+    unsigned pkt_buffer_tail_move() const { return pkt_buffer_.tail_move(); }
 
     int32_t getBufferCapacityInFrames() const {
         return managedStream_->getBufferSizeInFrames();
@@ -94,7 +106,8 @@ private:
     unsigned offset_ = 0;
     bool is_thread_affinity_set_ = false;
 
-    unsigned count_ = 0;
+    std::atomic<int> num_underrun_;
+    std::atomic<int> audio_buffer_size_;
 };
 
 #endif //PULSERTP_OBOEENGINE_H
