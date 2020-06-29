@@ -110,6 +110,7 @@ private:
         None,
         Overrun,
         Underrun,
+        Depleted,
     } state_ = State::None;
     bool is_thread_affinity_set_ = false;
 

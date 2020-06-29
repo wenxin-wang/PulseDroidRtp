@@ -267,17 +267,19 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
 
     if (state_ == State::None) {
         auto num_pkt = pkt_buffer_size();
-        if (num_pkt > pkt_buffer_capacity() / 2) {
-            state_ = State::Overrun;
+        if (num_pkt < pkt_buffer_capacity() / 32) {
+            state_ = State::Depleted;
         } else if (num_pkt < pkt_buffer_capacity() / 16) {
             state_ = State::Underrun;
+        } else if (num_pkt > pkt_buffer_capacity() / 2) {
+            state_ = State::Overrun;
         }
     }
     bool has_adjustment_ = false;
     for (int i = 0; i < numFrames; ++i) {
         for (int j = 0; j < kNumChannel; ++j) {
-            if (!EnsureBuffer()) {
-                state_ = State::Underrun;
+            if (state_ == State::Depleted || !EnsureBuffer()) {
+                state_ = State::Depleted;
                 // LOGE("No more data: %zu/%d", num_sample, numFrames);
             } else {
                 last_samples_[j] = ntohs((*buffer_)[offset_]);
@@ -288,10 +290,12 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
         if (!has_adjustment_ && state_ != State::None) {
             has_adjustment_ = true;
             auto num_pkt = pkt_buffer_size();
-            if (num_pkt > pkt_buffer_capacity() / 4) {
-                state_ = State::Overrun;
+            if (num_pkt < pkt_buffer_capacity() / 32) {
+                state_ = State::Depleted;
             } else if (num_pkt < pkt_buffer_capacity() / 8) {
                 state_ = State::Underrun;
+            } else if (num_pkt > pkt_buffer_capacity() / 4) {
+                state_ = State::Overrun;
             } else {
                 state_ = State::None;
             }
