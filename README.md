@@ -15,9 +15,6 @@ pactl load-module module-rtp-send source=rtp.monitor destination=224.0.0.56 port
 
 Here's something that still confuses me:
 
-- Once in a while, Oboe output thread would consume data faster than
-  they arrives, but never the other way around, even though Oboe and
-  PulseAudio are both using 48000 sample rate
 - If mtu is set to 1280, there is noticable delay between audio and
   video (audio lags behind lips movement); if it's set to 320, I
   cannot notice the delay. 1280B contains 320 samples, which should be
@@ -25,7 +22,7 @@ Here's something that still confuses me:
 
 TODO:
 
-- add UI for
+- [x] add UI for
  - [x] Start/Stop
  - [x] MTU
  - [x] IP/Port

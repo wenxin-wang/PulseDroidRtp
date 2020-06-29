@@ -158,7 +158,9 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     } else if (bytes_recvd != data_.size()) {
         LOGE("Strange packet %zu", bytes_recvd);
     }
-    auto buffer = pkt_buffer_.RefTailForWrite()->data();
+    auto vec = pkt_buffer_.RefTailForWrite();
+    vec->resize((bytes_recvd - kRtpHeader) / kSampleSize);
+    auto buffer = vec->data();
     std::memcpy(buffer, data_.data() + kRtpHeader, bytes_recvd - kRtpHeader);
     if (!pkt_buffer_.NextTail()) {
         // LOGE("Packet Buffer Full");
