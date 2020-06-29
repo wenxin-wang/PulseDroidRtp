@@ -5,6 +5,7 @@
 #include <jni.h>
 #include <oboe/Oboe.h>
 #include "PulseRtpOboeEngine.h"
+#include <logging_macros.h>
 
 extern "C" {
 JNIEXPORT jlong JNICALL
@@ -16,11 +17,16 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
         jint port,
         jint mtu) {
     // We use std::nothrow so `new` returns a nullptr if the engine creation fails
-    const char* ip_c = env->GetStringUTFChars(jip, 0);
+    const char *ip_c = env->GetStringUTFChars(jip, 0);
     std::string ip(ip_c);
     env->ReleaseStringUTFChars(jip, ip_c);
-    PulseRtpOboeEngine *engine = new(std::nothrow) PulseRtpOboeEngine(
-            latency_option, ip, (uint16_t)port, mtu);
+    PulseRtpOboeEngine *engine = nullptr;
+    try {
+        engine = new(std::nothrow) PulseRtpOboeEngine(
+                latency_option, ip, (uint16_t) port, mtu);
+    } catch (const std::system_error& e) {
+        LOGE("Cannot create PulseRtpOboeEngine %s", e.what());
+    }
     return reinterpret_cast<jlong>(engine);
 }
 

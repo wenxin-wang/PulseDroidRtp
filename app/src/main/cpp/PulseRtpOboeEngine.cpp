@@ -88,18 +88,19 @@ RtpReceiveThread::~RtpReceiveThread() {
 }
 
 void RtpReceiveThread::Start(const std::string& ip, uint16_t port, int mtu) {
-    thread_ = std::thread([&]() {
-        setThreadAffinity();
-        auto local_address = asio::ip::address::from_string(ip);
-        bool is_mcast = local_address.is_multicast();
-        auto listen_address = local_address;
-        if (is_mcast) {
-            if (local_address.is_v4()) {
-                listen_address = asio::ip::address::from_string("0.0.0.0");
-            } else if (local_address.is_v6()) {
-                listen_address = asio::ip::address::from_string("::");
-            }
+    auto local_address = asio::ip::address::from_string(ip);
+    bool is_mcast = local_address.is_multicast();
+    auto listen_address = local_address;
+    if (is_mcast) {
+        if (local_address.is_v4()) {
+            listen_address = asio::ip::address::from_string("0.0.0.0");
+        } else if (local_address.is_v6()) {
+            listen_address = asio::ip::address::from_string("::");
         }
+    }
+
+    thread_ = std::thread([=]() {
+        setThreadAffinity();
         // Create the socket so that multiple may be bound to the same address.
         asio::ip::udp::endpoint listen_endpoint(listen_address, port);
         socket_.open(listen_endpoint.protocol());

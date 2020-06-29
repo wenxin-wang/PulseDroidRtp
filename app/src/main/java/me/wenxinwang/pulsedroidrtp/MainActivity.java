@@ -107,14 +107,16 @@ public class MainActivity extends AppCompatActivity {
             mPlaying = false;
             StopPlaying();
             mButton.setText(R.string.play);
-        } else {
+            return;
+        }
+        boolean success = StartPlaying();
+        if (success) {
             mPlaying = true;
-            StartPlaying();
             mButton.setText(R.string.stop);
         }
     }
 
-    private void StartPlaying() {
+    private boolean StartPlaying() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1){
             AudioManager myAudioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             String sampleRateStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
@@ -136,7 +138,8 @@ public class MainActivity extends AppCompatActivity {
                 mPort = port;
             }
         } catch(NumberFormatException nfe) {
-            System.out.println("Could not parse port " + nfe);
+            setInfoMsg("Could not parse port " + nfe);
+            return false;
         }
         try {
             int mtu = Integer.parseInt(mMtuEdit.getText().toString());
@@ -144,8 +147,16 @@ public class MainActivity extends AppCompatActivity {
                 mMtu = mtu;
             }
         } catch(NumberFormatException nfe) {
-            System.out.println("Could not parse port " + nfe);
+            setInfoMsg("Could not parse port " + nfe);
+            return false;
         }
+
+        boolean success = PulseRtpAudioEngine.create(this, mLatencyOption, mIp, mPort, mMtu);
+        if (!success) {
+            setInfoMsg("Could not create PulseRtpAudioEngine");
+            return false;
+        }
+
         SharedPreferences sharedPref = getSharedPreferences(
             SHARRED_PREF_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
@@ -154,8 +165,7 @@ public class MainActivity extends AppCompatActivity {
         editor.putInt(SHARED_PREF_PORT, mPort);
         editor.putInt(SHARED_PREF_MTU, mMtu);
         editor.commit();
-
-        PulseRtpAudioEngine.create(this, mLatencyOption, mIp, mPort, mMtu);
+        return true;
     }
 
     private void StopPlaying() {
