@@ -118,6 +118,32 @@
             android:layout_gravity="center_vertical"/>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/maxLatencyContainer"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:layout_marginRight="@dimen/activity_horizontal_margin"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
+        android:orientation="horizontal"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/mtuContainer">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/maxLatency"
+            android:id="@+id/maxLatencyTitleText"
+            android:layout_gravity="center_vertical"
+            />
+        <EditText
+            android:id="@+id/maxLatencyEdit"
+            android:inputType="numberDecimal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_gravity="center_vertical"/>
+    </LinearLayout>
+
     <TextView
         android:id="@+id/info"
         android:layout_width="match_parent"

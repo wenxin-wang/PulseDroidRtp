@@ -11,11 +11,11 @@ namespace {
     static const unsigned kRtpHeader = 12;
     static const unsigned kNumChannel = 2;
     static const unsigned kSampleSize = 2;
-    static const unsigned kSampleRate = 48000;
-    static const unsigned kMaxLatency = 200;
+    // static const unsigned kSampleRate = 48000;
+    // static const unsigned kMaxLatency = 200;
 }
 
-PacketBuffer::PacketBuffer(unsigned mtu)
+PacketBuffer::PacketBuffer(unsigned mtu, unsigned sample_rate, unsigned max_latency)
         : head_(0)
         , tail_(0)
         , size_(0)
@@ -23,7 +23,7 @@ PacketBuffer::PacketBuffer(unsigned mtu)
         , head_move_(0)
         , tail_move_req_(0)
         , tail_move_(0) {
-    const unsigned num_buffer = (1 + kSampleRate * kMaxLatency / 1000 /
+    const unsigned num_buffer = (1 + sample_rate * max_latency / 1000 /
                                      (mtu / kNumChannel / kSampleSize));
     pkts_.reserve(num_buffer);
     for (unsigned i = 0; i < num_buffer; ++i) {
@@ -170,8 +170,9 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
 PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
                                        const std::string &ip,
                                        uint16_t port,
-                                       unsigned mtu)
-        : pkt_buffer_(mtu)
+                                       unsigned mtu,
+                                       unsigned max_latency)
+        : pkt_buffer_(mtu, oboe::DefaultStreamValues::SampleRate, max_latency)
         , receive_thread_(pkt_buffer_, ip, port, mtu)
         , last_samples_(kNumChannel)
         , num_underrun_(0)

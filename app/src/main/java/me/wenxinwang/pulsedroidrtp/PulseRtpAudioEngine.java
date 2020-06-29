@@ -13,11 +13,11 @@ public class PulseRtpAudioEngine {
         System.loadLibrary("pulsedroid-rtp");
     }
 
-    static boolean create(Context context, int latencyOption, String ip, int port, int mtu){
+    static boolean create(Context context, int latencyOption, String ip, int port, int mtu, int max_latency){
 
         if (mEngineHandle == 0){
             setDefaultStreamValues(context);
-            mEngineHandle = native_createEngine(latencyOption, ip, port, mtu);
+            mEngineHandle = native_createEngine(latencyOption, ip, port, mtu, max_latency);
         } else {
             Log.e("pulsedroid-rtp", "Engine handle already created");
         }
@@ -76,7 +76,7 @@ public class PulseRtpAudioEngine {
     }
 
     // Native methods
-    private static native long native_createEngine(int latencyOption, String ip, int port, int mtu);
+    private static native long native_createEngine(int latencyOption, String ip, int port, int mtu, int max_latency);
     private static native void native_deleteEngine(long engineHandle);
     private static native void native_setDefaultStreamValues(int sampleRate, int framesPerBurst);
     private static native int native_getNumUnderrun(long engineHandle);

@@ -5,6 +5,7 @@
     <string name="ip">IP</string>
     <string name="port">Port</string>
     <string name="mtu">MTU</string>
+    <string name="maxLatency">Max Latency (ms)</string>
 
     <string name="play">Play</string>
     <string name="stop">Stop</string>

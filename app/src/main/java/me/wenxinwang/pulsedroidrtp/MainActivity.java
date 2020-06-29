@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String SHARED_PREF_IP = "ip";
     private static final String SHARED_PREF_PORT = "port";
     private static final String SHARED_PREF_MTU = "mtu";
+    private static final String SHARED_PREF_MAX_LATENCY = "max_latency";
 
     private static final String STATE_PLAYING = "playing";
 
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText mIpEdit = null;
     private EditText mPortEdit = null;
     private EditText mMtuEdit = null;
+    private EditText mMaxLatencyEdit = null;
     private TextView mInfo = null;
     private Button mButton = null;
 
@@ -42,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private String mIp = "224.0.0.56";
     private int mPort = 4010;
     private int mMtu = 320;
+    private int mMaxLatency = 200;
 
     private Boolean mPlaying = false;
     private Handler mHandler = null;
@@ -75,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         mIpEdit = (EditText) findViewById(R.id.ipEdit);
         mPortEdit = (EditText) findViewById(R.id.portEdit);
         mMtuEdit = (EditText) findViewById(R.id.mtuEdit);
+        mMaxLatencyEdit = (EditText) findViewById(R.id.maxLatencyEdit);
 
         setupLatencySpinner();
 
@@ -84,11 +88,13 @@ public class MainActivity extends AppCompatActivity {
         mIp = sharedPref.getString(SHARED_PREF_IP, mIp);
         mPort = sharedPref.getInt(SHARED_PREF_PORT, mPort);
         mMtu = sharedPref.getInt(SHARED_PREF_MTU, mMtu);
+        mMaxLatency = sharedPref.getInt(SHARED_PREF_MAX_LATENCY, mMaxLatency);
 
         mLatencySpinner.setSelection(mLatencyOption);
         mIpEdit.setText(mIp);
         mPortEdit.setText(String.valueOf(mPort));
         mMtuEdit.setText(String.valueOf(mMtu));
+        mMaxLatencyEdit.setText(String.valueOf(mMaxLatency));
 
         mPlaying = false;
         if (savedInstanceState != null) {
@@ -168,8 +174,17 @@ public class MainActivity extends AppCompatActivity {
             setInfoMsg("Could not parse port " + nfe);
             return false;
         }
+        try {
+            int maxLatency = Integer.parseInt(mMaxLatencyEdit.getText().toString());
+            if (maxLatency > 0) {
+                mMaxLatency = maxLatency;
+            }
+        } catch (NumberFormatException nfe) {
+            setInfoMsg("Could not parse max latency " + nfe);
+            return false;
+        }
 
-        boolean success = PulseRtpAudioEngine.create(this, mLatencyOption, mIp, mPort, mMtu);
+        boolean success = PulseRtpAudioEngine.create(this, mLatencyOption, mIp, mPort, mMtu, mMaxLatency);
         if (!success) {
             setInfoMsg("Could not create PulseRtpAudioEngine");
             return false;
@@ -184,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
         editor.putString(SHARED_PREF_IP, mIp);
         editor.putInt(SHARED_PREF_PORT, mPort);
         editor.putInt(SHARED_PREF_MTU, mMtu);
+        editor.putInt(SHARED_PREF_MAX_LATENCY, mMaxLatency);
         editor.commit();
         return true;
     }
@@ -195,8 +211,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startUpdateStatusTimer() {
-        if (mHandler != null) {
-            return;
+        if (mHandler == null) {
+            mHandler = new Handler();
         }
         if (mStatusChecker == null) {
             mStatusChecker = new Runnable() {
@@ -207,7 +223,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             };
         }
-        mHandler = new Handler();
         mStatusChecker.run();
     }
 
