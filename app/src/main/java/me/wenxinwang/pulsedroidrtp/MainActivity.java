@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private String mIp = "224.0.0.56";
     private int mPort = 4010;
     private int mMtu = 320;
-    private int mMaxLatency = 200;
+    private int mMaxLatency = 300;
 
     private Boolean mPlaying = false;
     private Handler mHandler = null;

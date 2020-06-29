@@ -299,26 +299,30 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
             }
             outputData[i * kNumChannel + j] = last_samples_[j];
         }
-        if (!has_adjustment_ && state_ != State::None) {
-            has_adjustment_ = true;
+        if (state_ != State::None) {
             auto num_pkt = pkt_buffer_size();
             if (num_pkt < pkt_buffer_capacity() / 32) {
                 state_ = State::Depleted;
             } else if (num_pkt < pkt_buffer_capacity() / 8) {
-                state_ = State::Underrun;
+                if (state_ != State::Depleted) {
+                    state_ = State::Underrun;
+                }
             } else if (num_pkt > pkt_buffer_capacity() / 4) {
                 state_ = State::Overrun;
             } else {
                 state_ = State::None;
             }
-            if (state_ == State::Overrun) {
-                // skip one sample
-                // LOGE("OVERRUN %u/%u", num_pkt, pkt_buffer_capacity());
-                offset_ += kNumChannel;
-            } else if (state_ == State::Underrun) {
-                // repeat one sample
-                // LOGE("UNDERRUN %u/%u", num_pkt, pkt_buffer_capacity());
-                offset_ -= kNumChannel;
+            if (!has_adjustment_) {
+                has_adjustment_ = true;
+                if (state_ == State::Overrun) {
+                    // skip one sample
+                    // LOGE("OVERRUN %u/%u", num_pkt, pkt_buffer_capacity());
+                    offset_ += kNumChannel;
+                } else if (state_ == State::Underrun) {
+                    // repeat one sample
+                    // LOGE("UNDERRUN %u/%u", num_pkt, pkt_buffer_capacity());
+                    offset_ -= kNumChannel;
+                }
             }
         }
     }
