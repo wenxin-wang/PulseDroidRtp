@@ -2,9 +2,18 @@
 
 Similar to [PulseDroid](https://github.com/dront78/PulseDroid), but
 using `module-rtp-send` instead of `module-simple-protocol-tcp`. It
-turns out that my WIFI network is lossy and UDP works better.
+turns out that my WIFI network is lossy and UDP works better. The code
+references a lot from the official
+[hello-oboe](https://github.com/google/oboe/blob/master/samples/hello-oboe/)
+example.
 
-The following is the script I use to setup my desktop
+The icon can be found
+[here](https://thenounproject.com/term/headphones/2494847/),
+"Headphones by Crystal Gordon from the Noun Project", licensed with
+Creative Commons. It looks good, and I am not using it as a
+trademark. If this causes you trouble, please contact me.
+
+The following is the script I use to setup my desktop:
 
 ```bash
 pactl unload-module module-null-sink
