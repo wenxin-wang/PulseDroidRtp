@@ -103,7 +103,13 @@ private:
     oboe::ManagedStream managedStream_;
     std::unique_ptr<oboe::LatencyTuner> latencyTuner_;
     const std::vector<int16_t>* buffer_ = nullptr;
+    std::vector<int16_t> last_samples_;
     unsigned offset_ = 0;
+    enum State {
+        None,
+        Overrun,
+        Underrun,
+    } state_ = State::None;
     bool is_thread_affinity_set_ = false;
 
     std::atomic<int> num_underrun_;

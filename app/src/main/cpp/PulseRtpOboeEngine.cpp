@@ -12,7 +12,7 @@ namespace {
     static const unsigned kNumChannel = 2;
     static const unsigned kSampleSize = 2;
     static const unsigned kSampleRate = 48000;
-    static const unsigned kMaxLatency = 1000;
+    static const unsigned kMaxLatency = 200;
 }
 
 PacketBuffer::PacketBuffer(unsigned mtu)
@@ -173,6 +173,7 @@ PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
                                        unsigned mtu)
         : pkt_buffer_(mtu)
         , receive_thread_(pkt_buffer_, ip, port, mtu)
+        , last_samples_(kNumChannel)
         , num_underrun_(0)
         , audio_buffer_size_(0) {
     // Trace::initialize();
@@ -261,26 +262,46 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
     //             "numFrames %d, Underruns %d, buffer size %d",
     //             numFrames, underrunCountResult.value(), bufferSize);
 
-    size_t num_sample = 0;
+    if (state_ == State::None) {
+        auto num_pkt = pkt_buffer_size();
+        if (num_pkt > pkt_buffer_capacity() / 2) {
+            state_ = State::Overrun;
+        } else if (num_pkt < pkt_buffer_capacity() / 16) {
+            state_ = State::Underrun;
+        }
+    }
+    bool has_adjustment_ = false;
     for (int i = 0; i < numFrames; ++i) {
         for (int j = 0; j < kNumChannel; ++j) {
             if (!EnsureBuffer()) {
+                state_ = State::Underrun;
                 // LOGE("No more data: %zu/%d", num_sample, numFrames);
-                goto no_more_data;
+            } else {
+                last_samples_[j] = ntohs((*buffer_)[offset_]);
+                ++offset_;
             }
-            outputData[i * kNumChannel + j] = ntohs((*buffer_)[offset_]);
-            // outputData[i] = ((*buffer_)[offset_]);
-            ++offset_;
-            ++num_sample;
+            outputData[i * kNumChannel + j] = last_samples_[j];
         }
-    }
-    no_more_data:
-    if (num_sample < unsigned(numFrames) * kNumChannel) {
-        memset((char *) audioData + sizeof(int16_t) * num_sample, 0,
-               sizeof(int16_t) * (unsigned(numFrames) * kNumChannel - num_sample));
-        // std::string logstr =
-        //         "Fill with empty: " + std::to_string(num_sample) + "/" + std::to_string(numFrames);
-        // LOGE("Fill with empty: %zu/%d", num_sample, numFrames);
+        if (!has_adjustment_ && state_ != State::None) {
+            has_adjustment_ = true;
+            auto num_pkt = pkt_buffer_size();
+            if (num_pkt > pkt_buffer_capacity() / 4) {
+                state_ = State::Overrun;
+            } else if (num_pkt < pkt_buffer_capacity() / 8) {
+                state_ = State::Underrun;
+            } else {
+                state_ = State::None;
+            }
+            if (state_ == State::Overrun) {
+                // skip one sample
+                // LOGE("OVERRUN %u/%u", num_pkt, pkt_buffer_capacity());
+                offset_ += kNumChannel;
+            } else if (state_ == State::Underrun) {
+                // repeat one sample
+                // LOGE("UNDERRUN %u/%u", num_pkt, pkt_buffer_capacity());
+                offset_ -= kNumChannel;
+            }
+        }
     }
 
     // if (Trace::isEnabled()) Trace::endSection();
