@@ -4,4 +4,8 @@
     android:id="@+id/latencyOption"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:paddingLeft="@dimen/spinner_margin"
+    android:paddingTop="@dimen/spinner_margin"
+    android:paddingRight="@dimen/spinner_margin"
+    android:paddingBottom="@dimen/spinner_margin"
     />
