@@ -28,7 +28,9 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
         jstring jip,
         jint port,
         jint mtu,
-        jint max_latency) {
+        jint max_latency,
+        jint num_channel,
+        jint mask_channel) {
     // We use std::nothrow so `new` returns a nullptr if the engine creation fails
     const char *ip_c = env->GetStringUTFChars(jip, 0);
     std::string ip(ip_c);
@@ -36,7 +38,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
     PulseRtpOboeEngine *engine = nullptr;
     try {
         engine = new(std::nothrow) PulseRtpOboeEngine(
-                latency_option, ip, (uint16_t) port, mtu, max_latency);
+                latency_option, ip, (uint16_t) port, mtu, max_latency, num_channel, mask_channel);
     } catch (const std::system_error& e) {
         LOGE("Cannot create PulseRtpOboeEngine %s", e.what());
     }

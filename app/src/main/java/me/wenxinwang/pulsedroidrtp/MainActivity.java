@@ -43,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String SHARED_PREF_PORT = "port";
     private static final String SHARED_PREF_MTU = "mtu";
     private static final String SHARED_PREF_MAX_LATENCY = "max_latency";
+    private static final String SHARED_PREF_NUM_CHANNEL = "num_channel";
+    private static final String SHARED_PREF_MASK_CHANNEL = "mask_channel";
 
     private static final String STATE_PLAYING = "playing";
 
@@ -53,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
     private EditText mPortEdit = null;
     private EditText mMtuEdit = null;
     private EditText mMaxLatencyEdit = null;
+    private EditText mNumChannelEdit = null;
+    private EditText mMaskChannelEdit = null;
     private TextView mInfo = null;
     private Button mButton = null;
 
@@ -61,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
     private int mPort = 4010;
     private int mMtu = 320;
     private int mMaxLatency = 300;
+    private int mNumChannel = 2;
+    private int mMaskChannel = 0;
 
     private Boolean mPlaying = false;
     private Handler mHandler = null;
@@ -95,6 +101,8 @@ public class MainActivity extends AppCompatActivity {
         mPortEdit = (EditText) findViewById(R.id.portEdit);
         mMtuEdit = (EditText) findViewById(R.id.mtuEdit);
         mMaxLatencyEdit = (EditText) findViewById(R.id.maxLatencyEdit);
+        mNumChannelEdit = (EditText) findViewById(R.id.numChannelEdit);
+        mMaskChannelEdit = (EditText) findViewById(R.id.maskChannelEdit);
 
         setupLatencySpinner();
 
@@ -105,12 +113,16 @@ public class MainActivity extends AppCompatActivity {
         mPort = sharedPref.getInt(SHARED_PREF_PORT, mPort);
         mMtu = sharedPref.getInt(SHARED_PREF_MTU, mMtu);
         mMaxLatency = sharedPref.getInt(SHARED_PREF_MAX_LATENCY, mMaxLatency);
+        mNumChannel = sharedPref.getInt(SHARED_PREF_NUM_CHANNEL, mNumChannel);
+        mMaskChannel = sharedPref.getInt(SHARED_PREF_MASK_CHANNEL, mMaskChannel);
 
         mLatencySpinner.setSelection(mLatencyOption);
         mIpEdit.setText(mIp);
         mPortEdit.setText(String.valueOf(mPort));
         mMtuEdit.setText(String.valueOf(mMtu));
         mMaxLatencyEdit.setText(String.valueOf(mMaxLatency));
+        mNumChannelEdit.setText(String.valueOf(mNumChannel));
+        mMaskChannelEdit.setText(String.valueOf(mMaskChannel));
 
         mPlaying = false;
         if (savedInstanceState != null) {
@@ -199,8 +211,24 @@ public class MainActivity extends AppCompatActivity {
             setInfoMsg("Could not parse max latency " + nfe);
             return false;
         }
+        try {
+            int numChannel = Integer.parseInt(mNumChannelEdit.getText().toString());
+            if (numChannel > 0) {
+                mNumChannel = numChannel;
+            }
+        } catch (NumberFormatException nfe) {
+            setInfoMsg("Could not parse num channel " + nfe);
+            return false;
+        }
+        try {
+            mMaskChannel = Integer.parseInt(mMaskChannelEdit.getText().toString());
+        } catch (NumberFormatException nfe) {
+            setInfoMsg("Could not parse mask channel " + nfe);
+            return false;
+        }
 
-        boolean success = PulseRtpAudioEngine.create(this, mLatencyOption, mIp, mPort, mMtu, mMaxLatency);
+        boolean success = PulseRtpAudioEngine.create(
+            this, mLatencyOption, mIp, mPort, mMtu, mMaxLatency, mNumChannel, mMaskChannel);
         if (!success) {
             setInfoMsg("Could not create PulseRtpAudioEngine");
             return false;

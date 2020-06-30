@@ -33,7 +33,7 @@
 
 class PacketBuffer {
 public:
-    PacketBuffer(unsigned mtu, unsigned sample_rate, unsigned max_latency);
+    PacketBuffer(unsigned mtu, unsigned sample_rate, unsigned max_latency, unsigned num_channel);
     const std::vector<int16_t>* RefNextHeadForRead();
     std::vector<int16_t>* RefTailForWrite();
     bool NextTail();
@@ -77,7 +77,7 @@ class PulseRtpOboeEngine
 : public oboe::AudioStreamCallback {
 public:
     PulseRtpOboeEngine(int latency_option, const std::string& ip, uint16_t port, unsigned mtu,
-                       unsigned max_latency);
+                       unsigned max_latency, unsigned num_channel, unsigned mask_channel);
     ~PulseRtpOboeEngine();
 
     int num_underrun() const { return num_underrun_; }
@@ -115,9 +115,14 @@ private:
     RtpReceiveThread receive_thread_;
     oboe::ManagedStream managedStream_;
     std::unique_ptr<oboe::LatencyTuner> latencyTuner_;
+
+    unsigned num_channel_ = 0;
+    unsigned num_output_channel_ = 0;
+    unsigned mask_channel_ = 0;
+
     const std::vector<int16_t>* buffer_ = nullptr;
-    std::vector<int16_t> last_samples_;
     unsigned offset_ = 0;
+    std::vector<int16_t> last_samples_;
     enum State {
         None,
         Overrun,

@@ -21,13 +21,14 @@
 
 namespace {
     static const unsigned kRtpHeader = 12;
-    static const unsigned kNumChannel = 2;
+    // static const unsigned kNumChannel = 2;
     static const unsigned kSampleSize = 2;
     // static const unsigned kSampleRate = 48000;
     // static const unsigned kMaxLatency = 200;
 }
 
-PacketBuffer::PacketBuffer(unsigned mtu, unsigned sample_rate, unsigned max_latency)
+PacketBuffer::PacketBuffer(
+        unsigned mtu, unsigned sample_rate, unsigned max_latency, unsigned num_channel)
         : head_(0)
         , tail_(0)
         , size_(0)
@@ -36,7 +37,7 @@ PacketBuffer::PacketBuffer(unsigned mtu, unsigned sample_rate, unsigned max_late
         , tail_move_req_(0)
         , tail_move_(0) {
     const unsigned num_buffer = (1 + sample_rate * max_latency / 1000 /
-                                     (mtu / kNumChannel / kSampleSize));
+                                     (mtu / num_channel / kSampleSize));
     pkts_.reserve(num_buffer);
     for (unsigned i = 0; i < num_buffer; ++i) {
         pkts_.emplace_back(mtu / kSampleSize, 0);
@@ -185,13 +186,28 @@ PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
                                        const std::string &ip,
                                        uint16_t port,
                                        unsigned mtu,
-                                       unsigned max_latency)
-        : pkt_buffer_(mtu, oboe::DefaultStreamValues::SampleRate, max_latency)
+                                       unsigned max_latency,
+                                       unsigned num_channel,
+                                       unsigned mask_channel)
+        : pkt_buffer_(mtu, oboe::DefaultStreamValues::SampleRate, max_latency, num_channel)
         , receive_thread_(pkt_buffer_, ip, port, mtu)
-        , last_samples_(kNumChannel)
+        , num_channel_(num_channel)
+        , mask_channel_(mask_channel & ((1 << num_channel) - 1))
+        , last_samples_(num_channel)
         , num_underrun_(0)
         , audio_buffer_size_(0) {
     // Trace::initialize();
+    if (!mask_channel_) {
+        mask_channel_ = (1 << num_channel) - 1;
+    }
+    num_output_channel_ = 0;
+    mask_channel = mask_channel_;
+    while(mask_channel) {
+        if (mask_channel & 1U) {
+            ++num_output_channel_;
+        }
+        mask_channel >>= 1;
+    }
     Start(latency_option, ip, port, mtu);
 }
 
@@ -221,7 +237,7 @@ PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t po
     builder.setPerformanceMode(performanceMode);
     builder.setSharingMode(oboe::SharingMode::Exclusive);
     builder.setFormat(oboe::AudioFormat::I16);
-    builder.setChannelCount(oboe::ChannelCount::Stereo);
+    builder.setChannelCount(num_output_channel_);
     // Always use default sample rate
     // builder.setSampleRate(48000);
     builder.setCallback(this);
@@ -289,7 +305,9 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
     }
     bool has_adjustment_ = false;
     for (int i = 0; i < numFrames; ++i) {
-        for (int j = 0; j < kNumChannel; ++j) {
+        unsigned mask_channel = mask_channel_;
+        unsigned k = 0;
+        for (int j = 0; j < num_channel_; ++j) {
             if (state_ == State::Depleted || !EnsureBuffer()) {
                 state_ = State::Depleted;
                 // LOGE("No more data: %zu/%d", num_sample, numFrames);
@@ -297,7 +315,12 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
                 last_samples_[j] = ntohs((*buffer_)[offset_]);
                 ++offset_;
             }
-            outputData[i * kNumChannel + j] = last_samples_[j];
+            if (mask_channel & 1U) {
+                // only fill channel selected by mask
+                outputData[i * num_output_channel_ + k] = last_samples_[j];
+                ++k;
+            }
+            mask_channel >>= 1;
         }
         if (state_ != State::None) {
             auto num_pkt = pkt_buffer_size();
@@ -317,11 +340,11 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
                 if (state_ == State::Overrun) {
                     // skip one sample
                     // LOGE("OVERRUN %u/%u", num_pkt, pkt_buffer_capacity());
-                    offset_ += kNumChannel;
+                    offset_ += num_channel_;
                 } else if (state_ == State::Underrun) {
                     // repeat one sample
                     // LOGE("UNDERRUN %u/%u", num_pkt, pkt_buffer_capacity());
-                    offset_ -= kNumChannel;
+                    offset_ -= num_channel_;
                 }
             }
         }
