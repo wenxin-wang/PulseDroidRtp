@@ -244,6 +244,8 @@ public class MainActivity extends AppCompatActivity {
         editor.putInt(SHARED_PREF_PORT, mPort);
         editor.putInt(SHARED_PREF_MTU, mMtu);
         editor.putInt(SHARED_PREF_MAX_LATENCY, mMaxLatency);
+        editor.putInt(SHARED_PREF_NUM_CHANNEL, mNumChannel);
+        editor.putInt(SHARED_PREF_MASK_CHANNEL, mMaskChannel);
         editor.commit();
         return true;
     }
