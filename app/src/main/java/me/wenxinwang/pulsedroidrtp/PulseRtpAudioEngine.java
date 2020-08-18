@@ -91,6 +91,10 @@ public class PulseRtpAudioEngine {
         return native_getPktBufferTailMove(mEngineHandle);
     }
 
+    static long getPktReceived(){
+        return native_getPktReceived(mEngineHandle);
+    }
+
     // Native methods
     private static native long native_createEngine(
         int latencyOption, String ip, int port, int mtu, int max_latency, int num_channel, int mask_channel);
@@ -104,4 +108,5 @@ public class PulseRtpAudioEngine {
     private static native long native_getPktBufferHeadMove(long engineHandle);
     private static native long native_getPktBufferTailMoveReq(long engineHandle);
     private static native long native_getPktBufferTailMove(long engineHandle);
+    private static native long native_getPktReceived(long engineHandle);
 }

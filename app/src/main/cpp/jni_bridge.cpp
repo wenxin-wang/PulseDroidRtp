@@ -160,4 +160,17 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMov
     return jlong(engine->pkt_buffer_tail_move());
 }
 
+
+JNIEXPORT jlong JNICALL
+Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktReceived(
+        JNIEnv *env,
+        jclass /*unused*/,
+        jlong engineHandle) {
+    if (!engineHandle) {
+        return 0;
+    }
+    auto engine = reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
+    return jlong(engine->pkt_recved());
+}
+
 } // extern "C"

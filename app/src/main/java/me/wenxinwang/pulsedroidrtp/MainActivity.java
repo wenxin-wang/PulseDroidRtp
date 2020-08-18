@@ -286,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
                 ", underRun: " + PulseRtpAudioEngine.getNumUnderrun() +
                 "\npktBuffer: " + PulseRtpAudioEngine.getPktBufferSize() +
                 "/" + PulseRtpAudioEngine.getPktBufferCapacity() +
+                " " + PulseRtpAudioEngine.getPktReceived() +
                 "\nr: " + PulseRtpAudioEngine.getPktBufferHeadMoveReq() +
                 "/" + PulseRtpAudioEngine.getPktBufferHeadMove() +
                 "\nw: " + PulseRtpAudioEngine.getPktBufferTailMoveReq() +

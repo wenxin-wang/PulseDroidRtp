@@ -18,6 +18,7 @@
 #include <android/log.h>
 #include <logging_macros.h>
 #include <trace.h>
+#include <chrono>
 
 namespace {
     static const unsigned kRtpHeader = 12;
@@ -25,6 +26,7 @@ namespace {
     static const unsigned kSampleSize = 2;
     // static const unsigned kSampleRate = 48000;
     // static const unsigned kMaxLatency = 200;
+    static const unsigned kIdleRecvMs = 10000;
 }
 
 PacketBuffer::PacketBuffer(
@@ -81,8 +83,13 @@ bool PacketBuffer::NextTail() {
 
 RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer,
                                    const std::string &ip, uint16_t port, int mtu)
-        : pkt_buffer_(pkt_buffer), socket_(io_), data_(kRtpHeader + mtu) {
-    Start(ip, port, mtu);
+        : pkt_buffer_(pkt_buffer)
+        , ip_(ip)
+        , port_(port)
+        , socket_(io_)
+        , data_(kRtpHeader + mtu)
+        , idle_check_timer_(io_) {
+    Start();
 }
 
 // borrowed from oboe samples
@@ -108,34 +115,12 @@ RtpReceiveThread::~RtpReceiveThread() {
     Stop();
 }
 
-void RtpReceiveThread::Start(const std::string& ip, uint16_t port, int mtu) {
-    auto local_address = asio::ip::address::from_string(ip);
-    bool is_mcast = local_address.is_multicast();
-    auto listen_address = local_address;
-    if (is_mcast) {
-        if (local_address.is_v4()) {
-            listen_address = asio::ip::address::from_string("0.0.0.0");
-        } else if (local_address.is_v6()) {
-            listen_address = asio::ip::address::from_string("::");
-        }
-    }
+void RtpReceiveThread::Start() {
+    asio::ip::address::from_string(ip_);
 
     thread_ = std::thread([=]() {
         setThreadAffinity();
-        // Create the socket so that multiple may be bound to the same address.
-        asio::ip::udp::endpoint listen_endpoint(listen_address, port);
-        socket_.open(listen_endpoint.protocol());
-        if (is_mcast) {
-            socket_.set_option(asio::ip::udp::socket::reuse_address(true));
-        }
-        socket_.bind(listen_endpoint);
-
-        // Join the multicast group.
-        if (is_mcast) {
-            socket_.set_option(asio::ip::multicast::join_group(local_address));
-        }
-
-        StartReceive();
+        Restart();
         LOGI("Start Receiving");
         io_.run();
         LOGI("Stop Receiving");
@@ -147,6 +132,37 @@ void RtpReceiveThread::Stop() {
     if (thread_.joinable()) {
         thread_.join();
     }
+}
+
+void RtpReceiveThread::Restart() {
+    LOGE("Restart");
+    is_idle_ = false;
+    socket_.close();
+    socket_ = asio::ip::udp::socket(io_);
+    auto local_address = asio::ip::address::from_string(ip_);
+    bool is_mcast = local_address.is_multicast();
+    auto listen_address = local_address;
+    if (is_mcast) {
+        if (local_address.is_v4()) {
+            listen_address = asio::ip::address::from_string("0.0.0.0");
+        } else if (local_address.is_v6()) {
+            listen_address = asio::ip::address::from_string("::");
+        }
+    }
+    // Create the socket so that multiple may be bound to the same address.
+    asio::ip::udp::endpoint listen_endpoint(listen_address, port_);
+    socket_.open(listen_endpoint.protocol());
+    if (is_mcast) {
+        socket_.set_option(asio::ip::udp::socket::reuse_address(true));
+    }
+    socket_.bind(listen_endpoint);
+
+    // Join the multicast group.
+    if (is_mcast) {
+        socket_.set_option(asio::ip::multicast::join_group(local_address));
+    }
+
+    StartReceive();
 }
 
 void RtpReceiveThread::StartReceive() {
@@ -161,9 +177,18 @@ void RtpReceiveThread::StartReceive() {
                 }
                 HandleReceive(bytes_recvd);
             });
+    idle_check_timer_.expires_from_now(std::chrono::milliseconds(kIdleRecvMs));
+    idle_check_timer_.async_wait([&](const asio::error_code &error) {
+        if (error) {
+            return;
+        }
+        is_idle_ = true;
+        LOGE("Is Idle Now");
+    });
 }
 
 void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
+    pkt_recved_++;
     if (bytes_recvd <= kRtpHeader) {
         LOGE("Packet Too Small");
         StartReceive();
@@ -179,7 +204,11 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
         // LOGE("Packet Buffer Full");
     }
 
-    StartReceive();
+    if (is_idle_) {
+        Restart();
+    } else {
+        StartReceive();
+    }
 }
 
 PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
@@ -293,6 +322,7 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
     //             "numFrames %d, Underruns %d, buffer size %d",
     //             numFrames, underrunCountResult.value(), bufferSize);
 
+    auto old_state = state_;
     if (state_ == State::None) {
         auto num_pkt = pkt_buffer_size();
         if (num_pkt < pkt_buffer_capacity() / 32) {
@@ -302,7 +332,11 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
         } else if (num_pkt > pkt_buffer_capacity() / 2) {
             state_ = State::Overrun;
         }
+        if (state_ != old_state) {
+            LOGE("Enter state %u -> %u %u", unsigned(old_state), unsigned(state_), num_output_channel_);
+        }
     }
+    old_state = state_;
     bool has_adjustment_ = false;
     for (int i = 0; i < numFrames; ++i) {
         unsigned mask_channel = mask_channel_;
@@ -347,6 +381,10 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
                     offset_ -= num_channel_;
                 }
             }
+        }
+        if (state_ != old_state) {
+            LOGE("Change state1 %u -> %u", unsigned(old_state), unsigned(state_));
+            old_state = state_;
         }
     }
 

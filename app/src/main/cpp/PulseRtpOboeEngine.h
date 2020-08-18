@@ -60,17 +60,25 @@ class RtpReceiveThread {
 public:
     RtpReceiveThread(PacketBuffer& pkt_buffer, const std::string& ip, uint16_t port, int mtu);
     ~RtpReceiveThread();
+
+    unsigned pkt_recved() const { return pkt_recved_; }
 private:
-    void Start(const std::string& ip, uint16_t port, int mtu);
+    void Start();
+    void Restart();
     void Stop();
     void StartReceive();
     void HandleReceive(size_t bytes_recvd);
     PacketBuffer& pkt_buffer_;
     asio::io_context io_;
+    std::string ip_;
+    uint16_t port_;
     asio::ip::udp::socket socket_;
     asio::ip::udp::endpoint sender_endpoint_;
     std::vector<char> data_;
+    asio::steady_timer idle_check_timer_;
     std::thread thread_;
+    bool is_idle_ = false;
+    unsigned pkt_recved_ = 0;
 };
 
 class PulseRtpOboeEngine
@@ -88,7 +96,7 @@ public:
     unsigned pkt_buffer_head_move() const { return pkt_buffer_.head_move(); }
     unsigned pkt_buffer_tail_move_req() const { return pkt_buffer_.tail_move_req(); }
     unsigned pkt_buffer_tail_move() const { return pkt_buffer_.tail_move(); }
-
+    unsigned pkt_recved() const { return receive_thread_.pkt_recved(); }
     int32_t getBufferCapacityInFrames() const {
         return managedStream_->getBufferSizeInFrames();
     }
