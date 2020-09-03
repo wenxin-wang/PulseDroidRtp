@@ -32,7 +32,11 @@ Here's something that still confuses me:
 TODO:
 
 - [x] add UI for
- - [x] Start/Stop
- - [x] MTU
- - [x] IP/Port
+- [x] Start/Stop
+- [x] MTU
+- [x] IP/Port
 - [x] support unicast
+
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/me.wenxinwang.pulsedroidrtp/)
