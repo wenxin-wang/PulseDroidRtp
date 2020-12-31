@@ -149,6 +149,7 @@ void RtpReceiveThread::Restart() {
             listen_address = asio::ip::address::from_string("::");
         }
     }
+    LOGI("Listening on %s %s:%u", ip_.c_str(), listen_address.to_string().c_str(), port_);
     // Create the socket so that multiple may be bound to the same address.
     asio::ip::udp::endpoint listen_endpoint(listen_address, port_);
     socket_.open(listen_endpoint.protocol());
