@@ -27,14 +27,14 @@ include_directories(${DEBUG_UTILS_PATH})
 
 # App specific sources
 set (APP_SOURCES
-    jni_bridge.cpp
+        jni_bridge.cpp
         PulseRtpOboeEngine.cpp
     )
 
 # Build the libpulsedroid-rtp library
 add_library(pulsedroid-rtp SHARED
-    ${DEBUG_UTILS_SOURCES}
-    ${APP_SOURCES}
+        ${DEBUG_UTILS_SOURCES}
+        ${APP_SOURCES}
     )
 
 # Specify the libraries needed for hello-oboe

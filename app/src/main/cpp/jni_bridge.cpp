@@ -23,7 +23,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jint latency_option,
         jstring jip,
         jint port,
@@ -48,7 +48,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
 JNIEXPORT void JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1deleteEngine(
         JNIEnv *env,
-        jclass,
+        jobject,
         jlong engineHandle) {
 
     delete reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
@@ -57,7 +57,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1deleteEngine(
 JNIEXPORT void JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamValues(
         JNIEnv *env,
-        jclass type,
+        jobject type,
         jint sampleRate,
         jint framesPerBurst) {
     oboe::DefaultStreamValues::SampleRate = (int32_t) sampleRate;
@@ -67,7 +67,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamVal
 JNIEXPORT jint JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getNumUnderrun(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -79,7 +79,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getNumUnderrun(
 JNIEXPORT jint JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getAudioBufferSize(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -91,7 +91,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getAudioBufferSize(
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferSize(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -103,7 +103,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferSize(
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferCapacity(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -115,7 +115,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferCapacit
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMoveReq(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -127,7 +127,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMove(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -139,7 +139,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMoveReq(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -151,7 +151,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMove(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -164,7 +164,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktReceived(
         JNIEnv *env,
-        jclass /*unused*/,
+        jobject /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
