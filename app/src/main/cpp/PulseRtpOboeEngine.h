@@ -58,12 +58,12 @@ private:
 
 class RtpReceiveThread {
 public:
-    RtpReceiveThread(PacketBuffer& pkt_buffer, const std::string& ip, uint16_t port, int mtu);
+    RtpReceiveThread(PacketBuffer& pkt_buffer, std::string  ip, uint16_t port, unsigned mtu);
     ~RtpReceiveThread();
+    bool Start();
 
     unsigned pkt_recved() const { return pkt_recved_; }
 private:
-    void Start();
     void Restart();
     void Stop();
     void StartReceive();
@@ -84,8 +84,10 @@ private:
 class PulseRtpOboeEngine
 : public oboe::AudioStreamCallback {
 public:
-    PulseRtpOboeEngine(int latency_option, const std::string& ip, uint16_t port, unsigned mtu,
-                       unsigned max_latency, unsigned num_channel, unsigned mask_channel);
+    static std::unique_ptr<PulseRtpOboeEngine> Create(
+            int latency_option, const std::string &ip, uint16_t port, unsigned mtu,
+            unsigned max_latency, unsigned num_channel, unsigned mask_channel
+    );
     ~PulseRtpOboeEngine();
 
     int num_underrun() const { return num_underrun_; }
@@ -116,7 +118,9 @@ public:
     oboe::DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
 private:
-    void Start(int latency_option, const std::string& ip, uint16_t port, unsigned mtu);
+    PulseRtpOboeEngine(const std::string& ip, uint16_t port, unsigned mtu,
+                       unsigned max_latency, unsigned num_channel, unsigned mask_channel);
+    bool Start(int latency_option, const std::string& ip, uint16_t port, unsigned mtu);
     void Stop();
     bool EnsureBuffer();
     PacketBuffer pkt_buffer_;

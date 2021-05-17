@@ -23,7 +23,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jint latency_option,
         jstring jip,
         jint port,
@@ -35,20 +35,15 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1createEngine(
     const char *ip_c = env->GetStringUTFChars(jip, 0);
     std::string ip(ip_c);
     env->ReleaseStringUTFChars(jip, ip_c);
-    PulseRtpOboeEngine *engine = nullptr;
-    try {
-        engine = new(std::nothrow) PulseRtpOboeEngine(
-                latency_option, ip, (uint16_t) port, mtu, max_latency, num_channel, mask_channel);
-    } catch (const std::system_error& e) {
-        LOGE("Cannot create PulseRtpOboeEngine %s", e.what());
-    }
-    return reinterpret_cast<jlong>(engine);
+    auto engine = PulseRtpOboeEngine::Create(
+            latency_option, ip, (uint16_t) port, mtu, max_latency, num_channel, mask_channel);
+    return reinterpret_cast<jlong>(engine.release());
 }
 
 JNIEXPORT void JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1deleteEngine(
         JNIEnv *env,
-        jobject,
+        jclass,
         jlong engineHandle) {
 
     delete reinterpret_cast<PulseRtpOboeEngine *>(engineHandle);
@@ -57,7 +52,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1deleteEngine(
 JNIEXPORT void JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamValues(
         JNIEnv *env,
-        jobject type,
+        jclass type,
         jint sampleRate,
         jint framesPerBurst) {
     oboe::DefaultStreamValues::SampleRate = (int32_t) sampleRate;
@@ -67,7 +62,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1setDefaultStreamVal
 JNIEXPORT jint JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getNumUnderrun(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -79,7 +74,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getNumUnderrun(
 JNIEXPORT jint JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getAudioBufferSize(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -91,7 +86,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getAudioBufferSize(
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferSize(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -103,7 +98,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferSize(
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferCapacity(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -115,7 +110,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferCapacit
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMoveReq(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -127,7 +122,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMove(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -139,7 +134,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferHeadMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMoveReq(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -151,7 +146,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMove(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;
@@ -164,7 +159,7 @@ Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktBufferTailMov
 JNIEXPORT jlong JNICALL
 Java_me_wenxinwang_pulsedroidrtp_PulseRtpAudioEngine_native_1getPktReceived(
         JNIEnv *env,
-        jobject /*unused*/,
+        jclass /*unused*/,
         jlong engineHandle) {
     if (!engineHandle) {
         return 0;

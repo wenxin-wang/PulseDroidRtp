@@ -19,14 +19,15 @@
 #include <logging_macros.h>
 #include <trace.h>
 #include <chrono>
+#include <utility>
 
 namespace {
-    static const unsigned kRtpHeader = 12;
+    const unsigned kRtpHeader = 12;
     // static const unsigned kNumChannel = 2;
-    static const unsigned kSampleSize = 2;
+    const unsigned kSampleSize = 2;
     // static const unsigned kSampleRate = 48000;
     // static const unsigned kMaxLatency = 200;
-    static const unsigned kIdleRecvMs = 10000;
+    const unsigned kIdleRecvMs = 10000;
 }
 
 PacketBuffer::PacketBuffer(
@@ -82,14 +83,13 @@ bool PacketBuffer::NextTail() {
 }
 
 RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer,
-                                   const std::string &ip, uint16_t port, int mtu)
+                                   std::string ip, uint16_t port, unsigned mtu)
         : pkt_buffer_(pkt_buffer)
-        , ip_(ip)
+        , ip_(std::move(ip))
         , port_(port)
         , socket_(io_)
         , data_(kRtpHeader + mtu)
         , idle_check_timer_(io_) {
-    Start();
 }
 
 // borrowed from oboe samples
@@ -115,16 +115,33 @@ RtpReceiveThread::~RtpReceiveThread() {
     Stop();
 }
 
-void RtpReceiveThread::Start() {
+bool RtpReceiveThread::Start() {
     asio::ip::address::from_string(ip_);
+    std::mutex start_mutex;
+    std::condition_variable start_cv;
+    int start_success = 0;
 
-    thread_ = std::thread([=]() {
+    thread_ = std::thread([this, &start_mutex, &start_cv, &start_success]() {
         setThreadAffinity();
-        Restart();
+        bool has_error = false;
+        try {
+            Restart();
+        } catch (asio::system_error& e) {
+            LOGE("Failed to start receive thread, %s", e.what());
+            has_error = true;
+        }
+        {
+            std::unique_lock<std::mutex> lk(start_mutex);
+            start_success = has_error ? 2 : 1;
+            start_cv.notify_all();
+        }
         LOGI("Start Receiving");
         io_.run();
         LOGI("Stop Receiving");
     });
+    std::unique_lock<std::mutex> lk(start_mutex);
+    start_cv.wait(lk, [&] { return start_success != 0; });
+    return start_success == 1;
 }
 
 void RtpReceiveThread::Stop() {
@@ -212,8 +229,18 @@ void RtpReceiveThread::HandleReceive(size_t bytes_recvd) {
     }
 }
 
-PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
-                                       const std::string &ip,
+std::unique_ptr<PulseRtpOboeEngine> PulseRtpOboeEngine::Create(
+        int latency_option, const std::string &ip, uint16_t port, unsigned mtu,
+        unsigned max_latency, unsigned num_channel, unsigned mask_channel) {
+    auto engine = std::unique_ptr<PulseRtpOboeEngine>(new PulseRtpOboeEngine(
+            ip, port, mtu, max_latency, num_channel, mask_channel));
+    if (engine && !engine->Start(latency_option, ip, port, mtu)) {
+        return nullptr;
+    }
+    return engine;
+}
+
+PulseRtpOboeEngine::PulseRtpOboeEngine(const std::string &ip,
                                        uint16_t port,
                                        unsigned mtu,
                                        unsigned max_latency,
@@ -222,13 +249,13 @@ PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
         : pkt_buffer_(mtu, oboe::DefaultStreamValues::SampleRate, max_latency, num_channel)
         , receive_thread_(pkt_buffer_, ip, port, mtu)
         , num_channel_(num_channel)
-        , mask_channel_(mask_channel & ((1 << num_channel) - 1))
+        , mask_channel_(mask_channel & ((1U << num_channel) - 1))
         , last_samples_(num_channel)
         , num_underrun_(0)
         , audio_buffer_size_(0) {
     // Trace::initialize();
     if (!mask_channel_) {
-        mask_channel_ = (1 << num_channel) - 1;
+        mask_channel_ = (1U << num_channel) - 1;
     }
     num_output_channel_ = 0;
     mask_channel = mask_channel_;
@@ -236,17 +263,20 @@ PulseRtpOboeEngine::PulseRtpOboeEngine(int latency_option,
         if (mask_channel & 1U) {
             ++num_output_channel_;
         }
-        mask_channel >>= 1;
+        mask_channel >>= 1U;
     }
-    Start(latency_option, ip, port, mtu);
 }
 
 PulseRtpOboeEngine::~PulseRtpOboeEngine() {
     Stop();
 }
 
-void
+bool
 PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t port, unsigned mtu) {
+    if (!receive_thread_.Start()) {
+        LOGE("Failed to start receive thread");
+        return false;
+    }
     oboe::PerformanceMode performanceMode = oboe::PerformanceMode::None;
     switch (latency_option) {
         case 0:
@@ -264,10 +294,12 @@ PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t po
 
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output);
+    builder.setUsage(oboe::Usage::Media);
+    builder.setContentType(oboe::ContentType::Music);
     builder.setPerformanceMode(performanceMode);
     builder.setSharingMode(oboe::SharingMode::Exclusive);
     builder.setFormat(oboe::AudioFormat::I16);
-    builder.setChannelCount(num_output_channel_);
+    builder.setChannelCount(int(num_output_channel_));
     // Always use default sample rate
     // builder.setSampleRate(48000);
     builder.setCallback(this);
@@ -275,12 +307,19 @@ PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t po
     if (result != oboe::Result::OK) {
         LOGE("Failed to create stream. Error: %s",
              oboe::convertToText(result));
+        return false;
     }
     LOGI("Open stream, c:%d s:%d p:%d b:%d",
          getBufferCapacityInFrames(), getSharingMode(),
          getPerformanceMode(), getFramesPerBurst());
 
-    managedStream_->requestStart();
+    result = managedStream_->requestStart();
+    if (result != oboe::Result::OK) {
+        LOGE("Failed to start stream. Error: %s",
+             oboe::convertToText(result));
+        return false;
+    }
+    return true;
 }
 
 void PulseRtpOboeEngine::Stop() {
@@ -355,7 +394,7 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
                 outputData[i * num_output_channel_ + k] = last_samples_[j];
                 ++k;
             }
-            mask_channel >>= 1;
+            mask_channel >>= 1U;
         }
         if (state_ != State::None) {
             auto num_pkt = pkt_buffer_size();

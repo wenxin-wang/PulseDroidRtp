@@ -15,18 +15,26 @@
  */
 package me.wenxinwang.pulsedroidrtp
 
+import android.content.ComponentName
+import android.content.Intent
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.StrictMode
+import android.os.StrictMode.ThreadPolicy
+import android.os.StrictMode.VmPolicy
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import android.widget.AdapterView.OnItemSelectedListener
 import androidx.appcompat.app.AppCompatActivity
-import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.sampleRateStr
-import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.framesPerBurstStr
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.audioBufferSize
+import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.framesPerBurstStr
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.numUnderrun
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.pktBufferCapacity
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.pktBufferHeadMove
@@ -35,7 +43,9 @@ import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.pktBufferSize
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.pktBufferTailMove
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.pktBufferTailMoveReq
 import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.pktReceived
+import me.wenxinwang.pulsedroidrtp.PulseRtpAudioEngine.sampleRateStr
 import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
   private lateinit var mInfo: TextView
@@ -47,30 +57,83 @@ class MainActivity : AppCompatActivity() {
   private lateinit var mNumChannelEdit: EditText
   private lateinit var mMaskChannelEdit: EditText
   private lateinit var mLatencySpinner: Spinner
-  private var mLatencyOption = 0
-  private var mIp: String = "224.0.0.56"
-  private var mPort = 4010
-  private var mMtu = 320
-  private var mMaxLatency = 300
-  private var mNumChannel = 2
-  private var mMaskChannel = 0
+
+  private val mParams = PulseRtpAudioEngine.Params()
   private var mPlaying = false
 
+  private lateinit var mMediaBrowser: MediaBrowserCompat
   private lateinit var mHandler: Handler
   private lateinit var mStatusChecker: Runnable
 
-  override fun onSaveInstanceState(outState: Bundle) {
-    // Make sure to call the super method so that the states of our views are saved
-    super.onSaveInstanceState(outState)
-    // Save our own state now
-    outState.putSerializable(STATE_PLAYING, mPlaying)
+  private val mMediaBrowserConnectionCallback: MediaBrowserCompat.ConnectionCallback =
+    object : MediaBrowserCompat.ConnectionCallback() {
+      override fun onConnected() {
+        super.onConnected()
+        mMediaBrowser.sessionToken.also { token ->
+          val mediaController = MediaControllerCompat(this@MainActivity, token)
+          MediaControllerCompat.setMediaController(this@MainActivity, mediaController)
+        }
+        buildTransportControls()
+      }
+    }
+
+  private val mMediaControllerCallback: MediaControllerCompat.Callback =
+    object : MediaControllerCompat.Callback() {
+      override fun onPlaybackStateChanged(state: PlaybackStateCompat) {
+        super.onPlaybackStateChanged(state)
+        val playing = when (state.state) {
+          PlaybackStateCompat.STATE_PLAYING -> true
+          else -> false
+        }
+        if (playing == mPlaying) {
+          return
+        }
+        mPlaying = playing
+        togglePlayUI()
+        updateStatus()
+      }
+    }
+
+  private fun buildTransportControls() {
+    val mediaController = MediaControllerCompat.getMediaController(this)
+    mButton.setOnClickListener {
+      hideKb()
+      when (mediaController.playbackState.state) {
+        PlaybackStateCompat.STATE_PLAYING -> {
+          stopPlaying(mediaController)
+        }
+        PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.STATE_STOPPED -> {
+          startPlaying(mediaController)
+        }
+        else -> {}
+      }
+    }
+    mPlaying = when (mediaController.playbackState.state) {
+      PlaybackStateCompat.STATE_PLAYING -> true
+      else -> false
+    }
+    togglePlayUI()
+    mediaController.registerCallback(mMediaControllerCallback)
+  }
+  /**
+   * Called when the user touches the button
+   */
+  private fun togglePlayUI() {
+    // Do something in response to button click
+    if (mPlaying) {
+      startUpdateStatusTimer()
+      mButton.setText(R.string.stop)
+    } else {
+      stopUpdateStatusTimer()
+      mButton.setText(R.string.play)
+    }
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     setupViews()
-    restoreStates()
+    restoreParams()
     syncViewsWithStates()
     // dynamic states
     mHandler = Handler()
@@ -78,15 +141,28 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
         mHandler.postDelayed(mStatusChecker, STATUS_CHECK_INTERVAL.toLong())
     }
-    PulseRtpAudioEngine.initDefaultValues(this)
     setInfoMsg("""sampleRate: $sampleRateStr, framesPerBurst: $framesPerBurstStr""")
+    // Create MediaBrowserServiceCompat
+    mMediaBrowser = MediaBrowserCompat(
+      this,
+      ComponentName(this, PulseRtpAudioService::class.java),
+      mMediaBrowserConnectionCallback,
+      intent.extras
+    )
     mPlaying = false
-    // get playing state
-    savedInstanceState?.let {
-      if (it.getBoolean(STATE_PLAYING, false)) {
-        togglePlay()
-      }
-    }
+  }
+
+  override fun onStart() {
+    super.onStart()
+    mMediaBrowser.connect()
+  }
+
+  public override fun onStop() {
+    super.onStop()
+    // (see "stay in sync with the MediaSession")
+    MediaControllerCompat.getMediaController(this)
+      ?.unregisterCallback(mMediaControllerCallback)
+    mMediaBrowser.disconnect()
   }
 
   /*
@@ -95,6 +171,7 @@ class MainActivity : AppCompatActivity() {
      */
   override fun onResume() {
     super.onResume()
+    volumeControlStream = AudioManager.STREAM_MUSIC
     // StartPlaying();
   }
 
@@ -104,83 +181,43 @@ class MainActivity : AppCompatActivity() {
   }
 
   override fun onDestroy() {
-    stopPlaying()
+    stopPlaying(MediaControllerCompat.getMediaController(this))
     super.onDestroy()
   }
 
-  /**
-   * Called when the user touches the button
-   */
-  private fun togglePlay() {
-    hideKb()
-    // Do something in response to button click
-    if (mPlaying) {
-      mPlaying = false
-      stopPlaying()
-      mButton.setText(R.string.play)
-      return
-    }
-    val success = startPlaying()
-    if (success) {
-      mPlaying = true
-      mButton.setText(R.string.stop)
-    }
-  }
-
-  private fun startPlaying(): Boolean {
+  private fun startPlaying(mediaController: MediaControllerCompat): Boolean {
     // read params from views
-    mIp = mIpEdit.text.toString().takeIf { it.isNotEmpty() } ?: run {
+    mParams.ip = mIpEdit.text.toString().takeIf { it.isNotEmpty() } ?: run {
       setInfoMsg("Could not get ip")
       return false
     }
-    mPort = mPortEdit.text.toString().toIntOrNull()?.takeIf { it in 1..65535 } ?: run {
+    mParams.port = mPortEdit.text.toString().toIntOrNull() ?: run {
       setInfoMsg("Could not get port")
       return false
     }
-    mMtu = mMtuEdit.text.toString().toIntOrNull()?.takeIf { it > 0 } ?: run {
+    mParams.mtu = mMtuEdit.text.toString().toIntOrNull() ?: run {
       setInfoMsg("Could not get mtu")
       return false
     }
-    mMaxLatency = mMaxLatencyEdit.text.toString().toIntOrNull()?.takeIf { it > 0 } ?: run {
+    mParams.maxLatency = mMaxLatencyEdit.text.toString().toIntOrNull() ?: run {
       setInfoMsg("Could not get max latency")
       return false
     }
-    mNumChannel = mNumChannelEdit.text.toString().toIntOrNull()?.takeIf { it > 0 } ?: run {
+    mParams.numChannel = mNumChannelEdit.text.toString().toIntOrNull() ?: run {
       setInfoMsg("Could not get channel num")
       return false
     }
-    mMaskChannel = mMaskChannelEdit.text.toString().toIntOrNull() ?: run {
+    mParams.maskChannel = mMaskChannelEdit.text.toString().toIntOrNull() ?: run {
       setInfoMsg("Could not get channel num")
       return false
     }
-    // create engine, which is started immediately
-    val success = PulseRtpAudioEngine.create(
-      mLatencyOption, mIp, mPort, mMtu, mMaxLatency, mNumChannel, mMaskChannel
-    )
-    if (!success) {
-      setInfoMsg("Could not create PulseRtpAudioEngine")
-      return false
-    }
-    startUpdateStatusTimer()
-    val sharedPref = getSharedPreferences(
-      SHARRED_PREF_NAME, MODE_PRIVATE
-    )
-    val editor = sharedPref.edit()
-    editor.putInt(SHARED_PREF_LATENCY, mLatencyOption)
-    editor.putString(SHARED_PREF_IP, mIp)
-    editor.putInt(SHARED_PREF_PORT, mPort)
-    editor.putInt(SHARED_PREF_MTU, mMtu)
-    editor.putInt(SHARED_PREF_MAX_LATENCY, mMaxLatency)
-    editor.putInt(SHARED_PREF_NUM_CHANNEL, mNumChannel)
-    editor.putInt(SHARED_PREF_MASK_CHANNEL, mMaskChannel)
-    editor.commit()
+    mParams.saveToSharedPref(this)
+    PulseRtpAudioService.toggleServiceWithIntent(this, mParams.toUri())
     return true
   }
 
-  private fun stopPlaying() {
-    stopUpdateStatusTimer()
-    setInfoMsg("")
-    PulseRtpAudioEngine.destroy()
+  private fun stopPlaying(mediaController: MediaControllerCompat) {
+    mediaController.transportControls.pause()
   }
 
   private fun startUpdateStatusTimer() {
@@ -192,11 +229,12 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun updateStatus() {
-    val infoMsg = """sampleRate: $sampleRateStr, framesPerBurst: $framesPerBurstStr
+    val infoMsg = "sampleRate: $sampleRateStr, framesPerBurst: $framesPerBurstStr" +
+      if (mPlaying) """
 audioBuffer: $audioBufferSize, underRun: $numUnderrun
 pktBuffer: $pktBufferSize/$pktBufferCapacity $pktReceived
 r: $pktBufferHeadMoveReq/$pktBufferHeadMove
-w: $pktBufferTailMoveReq/$pktBufferTailMove"""
+w: $pktBufferTailMoveReq/$pktBufferTailMove""" else ""
     setInfoMsg(infoMsg)
   }
 
@@ -207,7 +245,6 @@ w: $pktBufferTailMoveReq/$pktBufferTailMove"""
   private fun setupViews() {
     mInfo = findViewById(R.id.info)
     mButton = findViewById(R.id.play)
-    mButton.setOnClickListener { togglePlay() }
     mIpEdit = findViewById(R.id.ipEdit)
     mPortEdit = findViewById(R.id.portEdit)
     mMtuEdit = findViewById(R.id.mtuEdit)
@@ -228,7 +265,7 @@ w: $pktBufferTailMoveReq/$pktBufferTailMove"""
     )
     mLatencySpinner.onItemSelectedListener = object : OnItemSelectedListener {
       override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, i: Int, l: Long) {
-        mLatencyOption = i
+        mParams.latencyOption = i
       }
 
       override fun onNothingSelected(adapterView: AdapterView<*>?) {}
@@ -237,37 +274,30 @@ w: $pktBufferTailMoveReq/$pktBufferTailMove"""
 
   private fun createLatencyOptionsList(): List<HashMap<String, String?>> {
     val latencyOptions = ArrayList<HashMap<String, String?>>()
-    for (i in LATENCY_OPTIONS.indices) {
+    for (i in PulseRtpAudioEngine.LATENCY_OPTIONS.indices) {
       val option = HashMap<String, String?>()
       option[getString(R.string.description_key)] =
-        LATENCY_OPTIONS[i]
+        PulseRtpAudioEngine.LATENCY_OPTIONS[i]
       option[getString(R.string.value_key)] = i.toString()
       latencyOptions.add(option)
     }
     return latencyOptions
   }
 
-  private fun restoreStates() {
-    // get saved states
-    val sharedPref = getSharedPreferences(SHARRED_PREF_NAME, MODE_PRIVATE)
-    mLatencyOption = sharedPref.getInt(SHARED_PREF_LATENCY, 0)
-    mIp = sharedPref.getString(SHARED_PREF_IP, null) ?: mIp
-    mPort = sharedPref.getInt(SHARED_PREF_PORT, mPort)
-    mMtu = sharedPref.getInt(SHARED_PREF_MTU, mMtu)
-    mMaxLatency = sharedPref.getInt(SHARED_PREF_MAX_LATENCY, mMaxLatency)
-    mNumChannel = sharedPref.getInt(SHARED_PREF_NUM_CHANNEL, mNumChannel)
-    mMaskChannel = sharedPref.getInt(SHARED_PREF_MASK_CHANNEL, mMaskChannel)
+  private fun restoreParams() {
+    PulseRtpAudioEngine.initDefaultValues(this)
+    mParams.fromSharedPref(this)
   }
 
   private fun syncViewsWithStates() {
     // sync ui with saved preferences
-    mLatencySpinner.setSelection(mLatencyOption)
-    mIpEdit.setText(mIp)
-    mPortEdit.setText(mPort.toString())
-    mMtuEdit.setText(mMtu.toString())
-    mMaxLatencyEdit.setText(mMaxLatency.toString())
-    mNumChannelEdit.setText(mNumChannel.toString())
-    mMaskChannelEdit.setText(mMaskChannel.toString())
+    mLatencySpinner.setSelection(mParams.latencyOption)
+    mIpEdit.setText(mParams.ip)
+    mPortEdit.setText(mParams.port.toString())
+    mMtuEdit.setText(mParams.mtu.toString())
+    mMaxLatencyEdit.setText(mParams.maxLatency.toString())
+    mNumChannelEdit.setText(mParams.numChannel.toString())
+    mMaskChannelEdit.setText(mParams.maskChannel.toString())
   }
 
   private fun hideKb() {
@@ -281,16 +311,6 @@ w: $pktBufferTailMoveReq/$pktBufferTailMove"""
   }
 
   companion object {
-    private val LATENCY_OPTIONS = arrayOf("Low Latency", "None", "Power Saving")
-    private const val SHARRED_PREF_NAME = "PulseDroidRtp"
-    private const val SHARED_PREF_LATENCY = "latency"
-    private const val SHARED_PREF_IP = "ip"
-    private const val SHARED_PREF_PORT = "port"
-    private const val SHARED_PREF_MTU = "mtu"
-    private const val SHARED_PREF_MAX_LATENCY = "max_latency"
-    private const val SHARED_PREF_NUM_CHANNEL = "num_channel"
-    private const val SHARED_PREF_MASK_CHANNEL = "mask_channel"
-    private const val STATE_PLAYING = "playing"
     private const val STATUS_CHECK_INTERVAL = 1000
   }
 }
