@@ -217,22 +217,20 @@ w: $pktBufferTailMoveReq/$pktBufferTailMove"""
   }
 
   private fun setupLatencySpinner() {
-    mLatencySpinner.setAdapter(
-      SimpleAdapter(
+    mLatencySpinner.adapter = SimpleAdapter(
         this,
         createLatencyOptionsList(),
         R.layout.latency_spinner,
         arrayOf(getString(R.string.description_key)),
         intArrayOf(R.id.latencyOption)
-      )
     )
-    mLatencySpinner.setOnItemSelectedListener(object : OnItemSelectedListener {
-      override fun onItemSelected(adapterView: AdapterView<*>?, view: View, i: Int, l: Long) {
+    mLatencySpinner.onItemSelectedListener = object : OnItemSelectedListener {
+      override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, i: Int, l: Long) {
         mLatencyOption = i
       }
 
       override fun onNothingSelected(adapterView: AdapterView<*>?) {}
-    })
+    }
   }
 
   private fun createLatencyOptionsList(): List<HashMap<String, String?>> {
