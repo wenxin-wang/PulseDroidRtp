@@ -29,14 +29,6 @@ Here's something that still confuses me:
   cannot notice the delay. 1280B contains 320 samples, which should be
   less than 7ms long. I wonder why this makes the delay noticable.
 
-TODO:
-
-- [x] add UI for
-- [x] Start/Stop
-- [x] MTU
-- [x] IP/Port
-- [x] support unicast
-
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
      height="80">](https://f-droid.org/packages/me.wenxinwang.pulsedroidrtp/)
