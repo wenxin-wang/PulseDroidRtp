@@ -25,8 +25,11 @@ object PulseRtpAudioEngine {
   var mSampleRateStr: String = ""
   var mFramesPerBurstStr: String = ""
 
+  fun initDefaultValues(context: Context) {
+    setDefaultStreamValues(context)
+  }
+
   fun create(
-    context: Context,
     latencyOption: Int,
     ip: String,
     port: Int,
@@ -36,7 +39,6 @@ object PulseRtpAudioEngine {
     mask_channel: Int
   ): Boolean {
     if (mEngineHandle == 0L) {
-      setDefaultStreamValues(context)
       mEngineHandle =
         native_createEngine(latencyOption, ip, port, mtu, max_latency, num_channel, mask_channel)
     } else {

@@ -78,6 +78,8 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
         mHandler.postDelayed(mStatusChecker, STATUS_CHECK_INTERVAL.toLong())
     }
+    PulseRtpAudioEngine.initDefaultValues(this)
+    setInfoMsg("""sampleRate: $sampleRateStr, framesPerBurst: $framesPerBurstStr""")
     mPlaying = false
     // get playing state
     savedInstanceState?.let {
@@ -153,7 +155,7 @@ class MainActivity : AppCompatActivity() {
     }
     // create engine, which is started immediately
     val success = PulseRtpAudioEngine.create(
-      this, mLatencyOption, mIp, mPort, mMtu, mMaxLatency, mNumChannel, mMaskChannel
+      mLatencyOption, mIp, mPort, mMtu, mMaxLatency, mNumChannel, mMaskChannel
     )
     if (!success) {
       setInfoMsg("Could not create PulseRtpAudioEngine")
