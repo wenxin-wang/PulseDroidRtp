@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.4.1)
 ### INCLUDE OBOE LIBRARY ###
 
 # Set the path to the Oboe library directory
-set (PROJ_DIR ../../../..)
-set (VENDOR_DIR ${PROJ_DIR}/thirdparty/vendor)
-set (BUILD_DIR ${PROJ_DIR}/build)
-set (OBOE_DIR ${VENDOR_DIR}/oboe)
+set(PROJ_DIR ../../../..)
+set(VENDOR_DIR ${PROJ_DIR}/thirdparty/vendor)
+set(BUILD_DIR ${PROJ_DIR}/build)
+set(OBOE_DIR ${VENDOR_DIR}/oboe)
 
 # Add the Oboe library as a subproject. Since Oboe is an out-of-tree source library we must also
 # specify a binary directory
@@ -17,8 +17,8 @@ include_directories(${OBOE_DIR}/include ${OBOE_DIR}/samples/shared)
 include_directories(${VENDOR_DIR}/asio/asio/include)
 
 # Debug utilities
-set (DEBUG_UTILS_PATH "${OBOE_DIR}/samples/debug-utils")
-set (DEBUG_UTILS_SOURCES ${DEBUG_UTILS_PATH}/trace.cpp)
+set(DEBUG_UTILS_PATH "${OBOE_DIR}/samples/debug-utils")
+set(DEBUG_UTILS_SOURCES ${DEBUG_UTILS_PATH}/trace.cpp)
 include_directories(${DEBUG_UTILS_PATH})
 
 
@@ -26,16 +26,16 @@ include_directories(${DEBUG_UTILS_PATH})
 
 
 # App specific sources
-set (APP_SOURCES
+set(APP_SOURCES
         jni_bridge.cpp
         PulseRtpOboeEngine.cpp
-    )
+        )
 
 # Build the libpulsedroid-rtp library
 add_library(pulsedroid-rtp SHARED
         ${DEBUG_UTILS_SOURCES}
         ${APP_SOURCES}
-    )
+        )
 
 # Specify the libraries needed for hello-oboe
 target_link_libraries(pulsedroid-rtp android log oboe)

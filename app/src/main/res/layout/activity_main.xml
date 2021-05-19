@@ -30,19 +30,20 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/info">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/latency_options"
                 android:id="@+id/latencyOptionsTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <Spinner
                 android:id="@+id/latencyOptionSpinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -55,20 +56,21 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/latencyOptionsContainer">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ip"
                 android:id="@+id/ipTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <EditText
                 android:id="@+id/ipEdit"
                 android:inputType="text"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -81,20 +83,21 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/ipContainer">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/port"
                 android:id="@+id/portTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <EditText
                 android:id="@+id/portEdit"
                 android:inputType="numberDecimal"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -107,20 +110,21 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/portContainer">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/mtu"
                 android:id="@+id/mtuTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <EditText
                 android:id="@+id/mtuEdit"
                 android:inputType="numberDecimal"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -133,20 +137,21 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/mtuContainer">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/maxLatency"
                 android:id="@+id/maxLatencyTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <EditText
                 android:id="@+id/maxLatencyEdit"
                 android:inputType="numberDecimal"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -159,20 +164,21 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/maxLatencyContainer">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/numChannel"
                 android:id="@+id/numChannelTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <EditText
                 android:id="@+id/numChannelEdit"
                 android:inputType="numberDecimal"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -185,20 +191,21 @@
             android:orientation="horizontal"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/numChannelContainer">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/maskChannel"
                 android:id="@+id/maskChannelTitleText"
-                android:layout_gravity="center_vertical"
-                />
+                android:layout_gravity="center_vertical" />
+
             <EditText
                 android:id="@+id/maskChannelEdit"
                 android:inputType="numberDecimal"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_horizontal_margin"
-                android:layout_gravity="center_vertical"/>
+                android:layout_gravity="center_vertical" />
         </LinearLayout>
 
         <LinearLayout
@@ -212,6 +219,7 @@
             android:gravity="center"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/maskChannelContainer">
+
             <Button
                 android:id="@+id/play"
                 android:layout_width="wrap_content"

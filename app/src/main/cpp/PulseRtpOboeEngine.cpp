@@ -32,13 +32,8 @@ namespace {
 
 PacketBuffer::PacketBuffer(
         unsigned mtu, unsigned sample_rate, unsigned max_latency, unsigned num_channel)
-        : head_(0)
-        , tail_(0)
-        , size_(0)
-        , head_move_req_(0)
-        , head_move_(0)
-        , tail_move_req_(0)
-        , tail_move_(0) {
+        : head_(0), tail_(0), size_(0), head_move_req_(0), head_move_(0), tail_move_req_(0),
+          tail_move_(0) {
     const unsigned num_buffer = (1 + sample_rate * max_latency / 1000 /
                                      (mtu / num_channel / kSampleSize));
     pkts_.reserve(num_buffer);
@@ -84,12 +79,8 @@ bool PacketBuffer::NextTail() {
 
 RtpReceiveThread::RtpReceiveThread(PacketBuffer &pkt_buffer,
                                    std::string ip, uint16_t port, unsigned mtu)
-        : pkt_buffer_(pkt_buffer)
-        , ip_(std::move(ip))
-        , port_(port)
-        , socket_(io_)
-        , data_(kRtpHeader + mtu)
-        , idle_check_timer_(io_) {
+        : pkt_buffer_(pkt_buffer), ip_(std::move(ip)), port_(port), socket_(io_),
+          data_(kRtpHeader + mtu), idle_check_timer_(io_) {
 }
 
 // borrowed from oboe samples
@@ -126,7 +117,7 @@ bool RtpReceiveThread::Start() {
         bool has_error = false;
         try {
             Restart();
-        } catch (asio::system_error& e) {
+        } catch (asio::system_error &e) {
             LOGE("Failed to start receive thread, %s", e.what());
             has_error = true;
         }
@@ -246,20 +237,17 @@ PulseRtpOboeEngine::PulseRtpOboeEngine(const std::string &ip,
                                        unsigned max_latency,
                                        unsigned num_channel,
                                        unsigned mask_channel)
-        : pkt_buffer_(mtu, oboe::DefaultStreamValues::SampleRate, max_latency, num_channel)
-        , receive_thread_(pkt_buffer_, ip, port, mtu)
-        , num_channel_(num_channel)
-        , mask_channel_(mask_channel & ((1U << num_channel) - 1))
-        , last_samples_(num_channel)
-        , num_underrun_(0)
-        , audio_buffer_size_(0) {
+        : pkt_buffer_(mtu, oboe::DefaultStreamValues::SampleRate, max_latency, num_channel),
+          receive_thread_(pkt_buffer_, ip, port, mtu), num_channel_(num_channel),
+          mask_channel_(mask_channel & ((1U << num_channel) - 1)), last_samples_(num_channel),
+          num_underrun_(0), audio_buffer_size_(0) {
     // Trace::initialize();
     if (!mask_channel_) {
         mask_channel_ = (1U << num_channel) - 1;
     }
     num_output_channel_ = 0;
     mask_channel = mask_channel_;
-    while(mask_channel) {
+    while (mask_channel) {
         if (mask_channel & 1U) {
             ++num_output_channel_;
         }
@@ -373,7 +361,8 @@ PulseRtpOboeEngine::onAudioReady(oboe::AudioStream *audioStream, void *audioData
             state_ = State::Overrun;
         }
         if (state_ != old_state) {
-            LOGE("Enter state %u -> %u %u", unsigned(old_state), unsigned(state_), num_output_channel_);
+            LOGE("Enter state %u -> %u %u", unsigned(old_state), unsigned(state_),
+                 num_output_channel_);
         }
     }
     old_state = state_;

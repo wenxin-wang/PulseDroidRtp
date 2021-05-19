@@ -1,18 +1,18 @@
 <resources>
-  <string name="app_name">PulseAudio Rtp Receiver</string>
-  <string name="notification_channel_name">PulseAudio Rtp Receiver Channel</string>
+    <string name="app_name">PulseAudio Rtp Receiver</string>
+    <string name="notification_channel_name">PulseAudio Rtp Receiver Channel</string>
 
-  <string name="latency_options">Latency Options</string>
-  <string name="ip">IP</string>
-  <string name="port">Port</string>
-  <string name="mtu">MTU</string>
-  <string name="maxLatency">Max Latency (ms)</string>
-  <string name="numChannel">Channel Count</string>
-  <string name="maskChannel">Channel Mask</string>
+    <string name="latency_options">Latency Options</string>
+    <string name="ip">IP</string>
+    <string name="port">Port</string>
+    <string name="mtu">MTU</string>
+    <string name="maxLatency">Max Latency (ms)</string>
+    <string name="numChannel">Channel Count</string>
+    <string name="maskChannel">Channel Mask</string>
 
-  <string name="play">Play</string>
-  <string name="stop">Stop</string>
-  <string name="pause">Pause</string>
-  <string name="description_key">description</string>
-  <string name="value_key">value</string>
+    <string name="play">Play</string>
+    <string name="stop">Stop</string>
+    <string name="pause">Pause</string>
+    <string name="description_key">description</string>
+    <string name="value_key">value</string>
 </resources>
