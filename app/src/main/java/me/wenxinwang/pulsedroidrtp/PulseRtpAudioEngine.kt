@@ -89,7 +89,9 @@ object PulseRtpAudioEngine {
 
         fun toUri(): Uri {
             val builder = Uri.Builder()
-            builder.path("/")
+            builder.scheme("udp")
+                .encodedAuthority("$ip:$port")
+                .path("/")
                 .appendQueryParameter(SHARED_PREF_LATENCY, latencyOption.toString())
                 .appendQueryParameter(SHARED_PREF_MTU, mtu.toString())
                 .appendQueryParameter(SHARED_PREF_MAX_LATENCY, maxLatency.toString())

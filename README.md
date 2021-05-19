@@ -25,6 +25,17 @@ pactl load-module module-rtp-send source=rtp.monitor destination=224.0.0.56 port
 If the app is granted permission to start on boot, and was playing music before last shutdown,
 it will continue playing music upon next boot.
 
+The following could be used to start playing using adb:
+
+```bash
+# setup params
+adb shell am startservice -n 'me.wenxinwang.pulsedroidrtp/.PulseRtpAudioService' -a 'android.intent.action.MEDIA_BUTTON' -d 'udp://224.0.0.56:4010/?latency=0\&mtu=320\&max_latency=300\&num_channel=2\&mask_channel=0'
+# or use start-foreground-service instead of startservice if things don't work
+
+# toggle playing
+adb shell input keyevent 85
+```
+
 Here's something that still confuses me:
 
 - If mtu is set to 1280, there is noticable delay between audio and
