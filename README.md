@@ -28,6 +28,9 @@ it will continue playing music upon next boot.
 The following could be used to start playing using adb:
 
 ```bash
+# start activity
+adb shell am start -n 'me.wenxinwang.pulsedroidrtp/.MainActivity'
+
 # setup params
 adb shell am startservice -n 'me.wenxinwang.pulsedroidrtp/.PulseRtpAudioService' -a 'android.intent.action.MEDIA_BUTTON' -d 'udp://224.0.0.56:4010/?latency=0\&mtu=320\&max_latency=300\&num_channel=2\&mask_channel=0'
 # or use start-foreground-service instead of startservice if things don't work
