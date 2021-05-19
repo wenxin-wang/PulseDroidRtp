@@ -214,7 +214,7 @@ class MainActivity : AppCompatActivity() {
             return false
         }
         mParams.saveToSharedPref(this)
-        PulseRtpAudioService.toggleServiceWithIntent(this, mParams.toUri())
+        PulseRtpAudioService.startServiceWithIntent(this, mParams.toUri(), false)
         return true
     }
 

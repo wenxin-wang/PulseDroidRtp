@@ -38,7 +38,7 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
             if (!wasPlaying) {
                 return
             }
-            toggleServiceWithIntent(context, null)
+            startServiceWithIntent(context, null, true)
         }
     }
 
@@ -73,6 +73,9 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
 
     private fun startPlay(uri: Uri) {
         Log.e(MEDIA_SESSION_LOG_TAG, "start play ${uri.toString()}")
+        if (PulseRtpAudioEngine.isPlaying()) {
+            return
+        }
         PulseRtpAudioEngine.Params().let { params ->
             params.fromUri(uri)
             if (!PulseRtpAudioEngine.create(params)) {
@@ -80,7 +83,6 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
                 return
             }
         }
-        mMediaSession.isActive = true
         initNoisyReceiver()
         acquireWifiLock()
         setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
@@ -88,10 +90,10 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
 
     private fun pausePlay() {
         Log.e(MEDIA_SESSION_LOG_TAG, "pause play")
-        PulseRtpAudioEngine.destroy()
-        if (!mMediaSession.isActive) {
+        if (!PulseRtpAudioEngine.isPlaying()) {
             return
         }
+        PulseRtpAudioEngine.destroy()
         unregisterReceiver(mNoisyReceiver)
         stopForeground(false)
         releaseWifiLock()
@@ -101,11 +103,10 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
     private fun stopPlay() {
         Log.e(MEDIA_SESSION_LOG_TAG, "stop play")
         stopSelf()
-        if (!mMediaSession.isActive) {
+        if (!PulseRtpAudioEngine.isPlaying()) {
             return
         }
         PulseRtpAudioEngine.destroy()
-        mMediaSession.isActive = false
         unregisterReceiver(mNoisyReceiver)
         stopForeground(true)
         releaseWifiLock()
@@ -124,6 +125,7 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         stopPlay()
+        mMediaSession.isActive = false
         mMediaSession.release()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).apply {
@@ -150,6 +152,7 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
             setCallback(mMediaSessionCallback)
             // Set the session's token so that client activities can communicate with it.
             setSessionToken(sessionToken)
+            isActive = true
         }
     }
 
@@ -214,7 +217,7 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
                 getString(R.string.pause),
                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                     this,
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE
+                    PlaybackStateCompat.ACTION_PAUSE
                 )
             )
             else -> NotificationCompat.Action(
@@ -222,7 +225,7 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
                 getString(R.string.play),
                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                     this,
-                    PlaybackStateCompat.ACTION_PLAY_PAUSE
+                    PlaybackStateCompat.ACTION_PLAY
                 )
             )
         }
@@ -266,9 +269,7 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        intent?.extras?.getString(MEDIA_SESSION_URI)?.let {
-            PulseRtpAudioEngine.commitUriString(it, this)
-        }
+        intent?.data?.let { uri -> PulseRtpAudioEngine.commitUri(uri, this) }
         MediaButtonReceiver.handleIntent(mMediaSession, intent)
         return super.onStartCommand(intent, flags, startId)
     }
@@ -277,20 +278,17 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
         private const val MEDIA_SESSION_LOG_TAG = "pulsedroidrtp_session"
         private const val MEDIA_SESSION_WIFI_LOCK_TAG = "pulsedroidrtp_wifilock"
         private const val NOTIFICATION_CHANNEL_ID = "PulseDroidRtpMediaSessionNotificationChannel"
-        private const val MEDIA_SESSION_URI = "pulsedroidrtp_uri"
         private const val NOTIFICATION_ID = 1
         private val BOOT_ACTIONS = arrayOf(
             "android.intent.action.BOOT_COMPLETED",
             "android.intent.action.QUICKBOOT_POWERON",
             "com.htc.intent.action.QUICKBOOT_POWERON")
 
-        fun toggleServiceWithIntent(context: Context, uri: Uri?) {
-            val i = Intent(Intent.ACTION_MEDIA_BUTTON)
-                .setClass(context, PulseRtpAudioService::class.java)
+        fun startServiceWithIntent(context: Context, uri: Uri?, foreground: Boolean) {
+            val i = Intent(Intent.ACTION_MEDIA_BUTTON, uri, context, PulseRtpAudioService::class.java)
                 .putExtra(Intent.EXTRA_KEY_EVENT,
-                    KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
-            uri?.toString().let { i.putExtra(MEDIA_SESSION_URI, it) }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY))
+            if (foreground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(i);
             } else {
                 context.startService(i);

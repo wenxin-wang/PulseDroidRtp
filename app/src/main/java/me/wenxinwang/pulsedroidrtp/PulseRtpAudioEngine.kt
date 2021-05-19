@@ -117,6 +117,10 @@ object PulseRtpAudioEngine {
         setDefaultStreamValues(context)
     }
 
+    fun isPlaying(): Boolean {
+        return mEngineHandle != 0L
+    }
+
     private fun setDefaultStreamValues(context: Context) {
         val myAudioMgr = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         mSampleRateStr = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
@@ -138,10 +142,10 @@ object PulseRtpAudioEngine {
         return sharedPref.getString(SHARED_PREF_URI, null)?.let { Uri.parse(it) }
     }
 
-    fun commitUriString(uriString: String, context: Context) {
+    fun commitUri(uri: Uri, context: Context) {
         val sharedPref = getSharedPreference(context)
         val editor = sharedPref.edit()
-        editor.putString(SHARED_PREF_URI, uriString)
+        editor.putString(SHARED_PREF_URI, uri.toString())
         editor.commit()
     }
 
