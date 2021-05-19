@@ -132,6 +132,18 @@ object PulseRtpAudioEngine {
     editor.commit()
   }
 
+  fun restorePlayState(context: Context): Boolean {
+    val sharedPref = getSharedPreference(context)
+    return sharedPref.getBoolean(SHARED_PREF_PLAY_STATE, false)
+  }
+
+  fun savePlayState(isPlaying: Boolean, context: Context) {
+    val sharedPref = getSharedPreference(context)
+    val editor = sharedPref.edit()
+    editor.putBoolean(SHARED_PREF_PLAY_STATE, isPlaying)
+    editor.apply()
+  }
+
   private fun getSharedPreference(context: Context): SharedPreferences {
     return context.getSharedPreferences(
       SHARRED_PREF_NAME, AppCompatActivity.MODE_PRIVATE)
@@ -208,4 +220,5 @@ object PulseRtpAudioEngine {
   private const val SHARED_PREF_NUM_CHANNEL = "num_channel"
   private const val SHARED_PREF_MASK_CHANNEL = "mask_channel"
   private const val SHARED_PREF_URI = "uri"
+  private const val SHARED_PREF_PLAY_STATE = "play_state"
 }

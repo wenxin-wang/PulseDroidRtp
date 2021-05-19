@@ -15,6 +15,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import android.util.Log
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
@@ -24,6 +25,23 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
   private lateinit var mMediaSession : MediaSessionCompat
   private lateinit var mStateBuilder : PlaybackStateCompat.Builder
   private lateinit var mWifiLock: WifiLock
+
+  class BootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+      if (context == null || intent == null) {
+        return
+      }
+      if (!BOOT_ACTIONS.contains(intent.action)) {
+          return
+      }
+      val wasPlaying = PulseRtpAudioEngine.restorePlayState(context)
+      if (!wasPlaying) {
+        return
+      }
+      toggleServiceWithIntent(context, null)
+    }
+  }
+
   private val mNoisyReceiver: BroadcastReceiver = object : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
       PulseRtpAudioEngine.destroy()
@@ -35,17 +53,20 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
       override fun onStop() {
         super.onStop()
         stopPlay()
+        PulseRtpAudioEngine.savePlayState(false, this@PulseRtpAudioService)
       }
 
       override fun onPause() {
         super.onPause()
         pausePlay()
+        PulseRtpAudioEngine.savePlayState(false, this@PulseRtpAudioService)
       }
 
       override fun onPlay() {
         super.onPlay()
         PulseRtpAudioEngine.restoreUri(this@PulseRtpAudioService)?.let { uri ->
           startPlay(uri)
+          PulseRtpAudioEngine.savePlayState(true, this@PulseRtpAudioService)
         }
       }
     }
@@ -96,6 +117,9 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
     initMediaSession()
     initNotificationChannel()
     initWifiLock()
+
+    // Set an initial PlaybackState with ACTION_PLAY, so media buttons can start the player
+    setMediaPlaybackState(PlaybackStateCompat.STATE_STOPPED)
   }
 
   override fun onDestroy() {
@@ -127,8 +151,6 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
       // Set the session's token so that client activities can communicate with it.
       setSessionToken(sessionToken)
     }
-    // Set an initial PlaybackState with ACTION_PLAY, so media buttons can start the player
-    setMediaPlaybackState(PlaybackStateCompat.STATE_STOPPED)
   }
 
   private fun initNoisyReceiver() {

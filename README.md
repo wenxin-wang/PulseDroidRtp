@@ -22,6 +22,9 @@ pactl load-module module-null-sink sink_name=rtp format=s16be channels=2 rate=48
 pactl load-module module-rtp-send source=rtp.monitor destination=224.0.0.56 port=4010 mtu=320
 ```
 
+If the app is granted permission to start on boot, and was playing music before last shutdown,
+it will continue playing music upon next boot.
+
 Here's something that still confuses me:
 
 - If mtu is set to 1280, there is noticable delay between audio and
