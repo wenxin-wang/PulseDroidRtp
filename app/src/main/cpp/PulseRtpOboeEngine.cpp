@@ -107,7 +107,6 @@ RtpReceiveThread::~RtpReceiveThread() {
 }
 
 bool RtpReceiveThread::Start() {
-    asio::ip::address::from_string(ip_);
     std::mutex start_mutex;
     std::condition_variable start_cv;
     int start_success = 0;
@@ -125,6 +124,9 @@ bool RtpReceiveThread::Start() {
             std::unique_lock<std::mutex> lk(start_mutex);
             start_success = has_error ? 2 : 1;
             start_cv.notify_all();
+        }
+        if (has_error) {
+            return;
         }
         LOGI("Start Receiving");
         io_.run();
@@ -311,7 +313,9 @@ PulseRtpOboeEngine::Start(int latency_option, const std::string &ip, uint16_t po
 }
 
 void PulseRtpOboeEngine::Stop() {
-    managedStream_->stop(); // timeout for 2s
+    if (managedStream_) {
+        managedStream_->stop(); // timeout for 2s
+    }
     latencyTuner_.reset();
 }
 

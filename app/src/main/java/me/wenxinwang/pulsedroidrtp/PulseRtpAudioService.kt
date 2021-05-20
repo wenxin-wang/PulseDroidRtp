@@ -65,27 +65,31 @@ class PulseRtpAudioService : MediaBrowserServiceCompat() {
             override fun onPlay() {
                 super.onPlay()
                 PulseRtpAudioEngine.restoreUri(this@PulseRtpAudioService)?.let { uri ->
-                    startPlay(uri)
-                    PulseRtpAudioEngine.savePlayState(true, this@PulseRtpAudioService)
+                    val success = startPlay(uri)
+                    PulseRtpAudioEngine.savePlayState(success, this@PulseRtpAudioService)
+                    if (!success) {
+                        PulseRtpAudioEngine.unstoreUri(this@PulseRtpAudioService)
+                    }
                 }
             }
         }
 
-    private fun startPlay(uri: Uri) {
+    private fun startPlay(uri: Uri): Boolean {
         Log.e(MEDIA_SESSION_LOG_TAG, "start play ${uri.toString()}")
         if (PulseRtpAudioEngine.isPlaying()) {
-            return
+            return true
         }
         PulseRtpAudioEngine.Params().let { params ->
             params.fromUri(uri)
             if (!PulseRtpAudioEngine.create(params)) {
                 Log.e(MEDIA_SESSION_LOG_TAG, "Failed to create PulseRtpAudioEngine")
-                return
+                return false
             }
         }
         initNoisyReceiver()
         acquireWifiLock()
         setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+        return true
     }
 
     private fun pausePlay() {

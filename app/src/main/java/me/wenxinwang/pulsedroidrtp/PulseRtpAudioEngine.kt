@@ -151,6 +151,13 @@ object PulseRtpAudioEngine {
         editor.commit()
     }
 
+    fun unstoreUri(context: Context) {
+        val sharedPref = getSharedPreference(context)
+        val editor = sharedPref.edit()
+        editor.remove(SHARED_PREF_URI)
+        editor.commit()
+    }
+
     fun restorePlayState(context: Context): Boolean {
         val sharedPref = getSharedPreference(context)
         return sharedPref.getBoolean(SHARED_PREF_PLAY_STATE, false)
